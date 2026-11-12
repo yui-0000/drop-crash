@@ -358,7 +358,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function spawnItem() {
         if (isGameOver) return;
 
-        const itemX = Math.random() * (canvas.width - 40);
         const rand = Math.random();
 
         let baseSpeed = 3.5;
@@ -371,18 +370,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (feverTimer > 0) {
             if (selectedDifficulty === 'easy') {
+                // EASY：スター30% / りんご40% / いちご30%（障害物なし）
                 if (rand < 0.30) { type = 'star'; speed = 8.5 + speedBonus; }
                 else if (rand < 0.70) { type = 'apple'; speed = 6.0 + speedBonus; }
                 else { type = 'strawberry'; speed = 5.0 + speedBonus; }
             } else if (selectedDifficulty === 'normal') {
-                if (rand < 0.25) { type = 'star'; speed = 9.0 + speedBonus; }
-                else if (rand < 0.65) { type = 'apple'; speed = 6.0 + speedBonus; }
-                else { type = 'strawberry'; speed = 5.0 + speedBonus; }
+                // NORMAL：スター20% / りんご35% / いちご30% / いがぐり10% / 爆弾5%
+                if (rand < 0.20) { type = 'star'; speed = 9.0 + speedBonus; }
+                else if (rand < 0.55) { type = 'apple'; speed = 6.0 + speedBonus; }
+                else if (rand < 0.85) { type = 'strawberry'; speed = 5.0 + speedBonus; }
+                else if (rand < 0.95) { type = 'chestnut'; speed = 6.5 + speedBonus; }
+                else { type = 'bomb'; speed = 7.5 + speedBonus; }
             } else {
-                if (rand < 0.20) { type = 'star'; speed = 10.0 + speedBonus; }
-                else if (rand < 0.45) { type = 'apple'; speed = 7.0 + speedBonus; }
-                else if (rand < 0.70) { type = 'bomb'; speed = 8.0 + speedBonus; }
-                else { type = 'strawberry'; speed = 6.0 + speedBonus; }
+                // HARD：スター15% / りんご25% / いちご30% / いがぐり15% / 爆弾15%
+                if (rand < 0.15) { type = 'star'; speed = 10.0 + speedBonus; }
+                else if (rand < 0.40) { type = 'apple'; speed = 7.0 + speedBonus; }
+                else if (rand < 0.70) { type = 'strawberry'; speed = 6.0 + speedBonus; }
+                else if (rand < 0.85) { type = 'chestnut'; speed = 7.5 + speedBonus; }
+                else { type = 'bomb'; speed = 8.5 + speedBonus; }
             }
         } else {
             if (rand < 0.05) {
@@ -407,11 +412,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        // いがぐりだけ中間サイズ（49px）にする
+        const itemSize = (type === 'chestnut') ? 49 : 40;
+        const itemX = Math.random() * (canvas.width - itemSize);
+
         items.push({
             x: itemX,
-            y: -40,
-            width: 40,
-            height: 40,
+            y: -itemSize,
+            width: itemSize,
+            height: itemSize,
             type: type,
             speed: speed
         });
@@ -429,20 +438,37 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = items[i];
             item.y += item.speed;
 
+            // いがぐりのサイズ（49px）に合わせた当たり判定の余白
+            const pad = (item.type === 'chestnut') ? 4 : 0;
+
             if (
-                player.x < item.x + item.width &&
-                player.x + player.width > item.x &&
-                player.y < item.y + item.height &&
-                player.y + player.height > item.y
+                player.x < item.x + item.width - pad &&
+                player.x + player.width > item.x + pad &&
+                player.y < item.y + item.height - pad &&
+                player.y + player.height > item.y + pad
             ) {
+                // フィーバー中の得点・減点倍率（EASY:1倍 / NORMAL:プラス1.2倍 / HARD:プラス2.0倍・マイナス1.5倍）
+                let plusMultiplier = 1.0;
+                let minusMultiplier = 1.0;
+                if (feverTimer > 0) {
+                    if (selectedDifficulty === 'normal') {
+                        plusMultiplier = 1.2;
+                    } else if (selectedDifficulty === 'hard') {
+                        plusMultiplier = 2.0;
+                        minusMultiplier = 1.5;
+                    }
+                }
+
                 if (item.type === 'apple') {
                     combo++;
                     const comboMultiplier = Math.min(combo, 5);
-                    score += 5 * comboMultiplier;
+                    const gained = Math.round(5 * comboMultiplier * plusMultiplier);
+                    score += gained;
                 } else if (item.type === 'strawberry') {
                     combo++;
                     const comboMultiplier = Math.min(combo, 5);
-                    score += 3 * comboMultiplier;
+                    const gained = Math.round(3 * comboMultiplier * plusMultiplier);
+                    score += gained;
                 } else if (item.type === 'star') {
                     feverTimer = feverMaxDuration;
                     player.speed = boostSpeed;
@@ -451,11 +477,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     timeLeft += 5;
                 } else if (item.type === 'chestnut') {
                     combo = 0;
-                    score = Math.max(0, score - 1);
+                    const lost = Math.ceil(1 * minusMultiplier); // 通常:1 / HARDフィーバー:2
+                    score = Math.max(0, score - lost);
                     stunTimer = 3;
                 } else if (item.type === 'bomb') {
                     combo = 0;
-                    score = Math.max(0, score - 5);
+                    const lost = Math.ceil(5 * minusMultiplier); // 通常:5 / HARDフィーバー:8
+                    score = Math.max(0, score - lost);
                     stunTimer = 5;
                 }
 
@@ -510,16 +538,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (feverTimer > 0) {
             ctx.fillStyle = '#fffa65';
-            ctx.font = 'bold 28px sans-serif';
+            ctx.font = 'bold 26px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText(`★ FEVER TIME! (${feverTimer}s) ★`, canvas.width / 2, 75);
+            let feverLabel = `★ FEVER TIME! (${feverTimer}s) ★`;
+            if (selectedDifficulty === 'normal') {
+                feverLabel = `★ FEVER! SCORE x1.2 (${feverTimer}s) ★`;
+            } else if (selectedDifficulty === 'hard') {
+                feverLabel = `★ FEVER! SCORE x2 / RISK x1.5 (${feverTimer}s) ★`;
+            }
+            ctx.fillText(feverLabel, canvas.width / 2, 75);
             ctx.textAlign = 'left';
         }
 
         // アイテム描画
         items.forEach(item => {
             const img = itemImages[item.type];
-            if (img && img.complete) {
+            if (!img || !img.complete) return;
+
+            if (item.type === 'chestnut' && img.naturalWidth > 0 && img.naturalHeight > 0) {
+                // いがぐり専用描画：横長画像の左右の黒余白を切り抜き、丸く表示＋黄緑の輪郭光彩で視認性アップ
+                ctx.save();
+                const centerX = item.x + item.width / 2;
+                const centerY = item.y + item.height / 2;
+                const radius = item.width / 2;
+
+                // 目立つ黄緑色の輪郭グロー
+                ctx.shadowBlur = 12;
+                ctx.shadowColor = '#badc58';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius - 2, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(186, 220, 88, 0.25)';
+                ctx.fill();
+
+                // 丸く切り抜いて中央のいがぐり部分を拡大描画
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                ctx.clip();
+
+                const cropSize = Math.min(img.naturalWidth, img.naturalHeight);
+                const sx = (img.naturalWidth - cropSize) / 2;
+                const sy = (img.naturalHeight - cropSize) / 2;
+                ctx.drawImage(img, sx, sy, cropSize, cropSize, item.x, item.y, item.width, item.height);
+                ctx.restore();
+            } else {
                 ctx.drawImage(img, item.x, item.y, item.width, item.height);
             }
         });
