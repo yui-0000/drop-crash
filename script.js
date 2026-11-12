@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chestnut: new Image(),
         bomb: new Image()
     };
-
     itemImages.apple.src = 'images/apple.png';
     itemImages.strawberry.src = 'images/strawberry.png';
     itemImages.star.src = 'images/star.png';
@@ -57,7 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // プレイヤー設定
     const normalSpeed = 8;
     const boostSpeed = 15;
-
     const player = {
         x: canvas.width / 2 - 40,
         y: canvas.height - 100,
@@ -88,13 +86,30 @@ document.addEventListener('DOMContentLoaded', () => {
     const items = [];
     const keys = { left: false, right: false };
 
-    // --- ゲームオーバー画面用 ボタン配置データ ---
-    const gameOverButtons = {
-        retry: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 50, width: 180, height: 42, label: 'もう一度遊ぶ' },
-        easy: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'easy', label: 'EASY' },
-        normal: { x: canvas.width / 2 - 45, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'normal', label: 'NORMAL' },
-        hard: { x: canvas.width / 2 + 55, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'hard', label: 'HARD' }
-    };
+    // スマホ判定関数（スマホのときだけゲームオーバー表示を大きくする）
+    function isMobileDevice() {
+        return window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth <= 900;
+    }
+
+    // --- ゲームオーバー画面用 ボタン配置データ（PC/スマホ自動切り替え） ---
+    function getGameOverButtons() {
+        if (isMobileDevice()) {
+            // スマホ専用：大きく押しやすいサイズ
+            return {
+                retry: { x: canvas.width / 2 - 175, y: canvas.height / 2 + 45, width: 350, height: 76, label: 'もう一度遊ぶ' },
+                easy: { x: canvas.width / 2 - 245, y: canvas.height / 2 + 145, width: 150, height: 58, diff: 'easy', label: 'EASY' },
+                normal: { x: canvas.width / 2 - 75, y: canvas.height / 2 + 145, width: 150, height: 58, diff: 'normal', label: 'NORMAL' },
+                hard: { x: canvas.width / 2 + 95, y: canvas.height / 2 + 145, width: 150, height: 58, diff: 'hard', label: 'HARD' }
+            };
+        }
+        // パソコン用：従来のサイズ
+        return {
+            retry: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 50, width: 180, height: 42, label: 'もう一度遊ぶ' },
+            easy: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'easy', label: 'EASY' },
+            normal: { x: canvas.width / 2 - 45, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'normal', label: 'NORMAL' },
+            hard: { x: canvas.width / 2 + 55, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'hard', label: 'HARD' }
+        };
+    }
 
     // パソコン用キーボード操作（矢印キーのみ）
     window.addEventListener('keydown', (e) => {
@@ -141,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateCanvasTouchDirection(e) {
         if (isGameOver) return;
         e.preventDefault();
-
         const rect = canvas.getBoundingClientRect();
         let touchLeft = false;
         let touchRight = false;
@@ -200,9 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const clickX = (e.clientX - rect.left) * scaleX;
         const clickY = (e.clientY - rect.top) * scaleY;
 
+        const buttons = getGameOverButtons();
+
         // 難易度切り替えボタン判定
         ['easy', 'normal', 'hard'].forEach(diffKey => {
-            const btn = gameOverButtons[diffKey];
+            const btn = buttons[diffKey];
             if (
                 clickX >= btn.x && clickX <= btn.x + btn.width &&
                 clickY >= btn.y && clickY <= btn.y + btn.height
@@ -213,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // 「もう一度遊ぶ」ボタン判定（選択中の難易度ですぐにスタート）
-        const retry = gameOverButtons.retry;
+        const retry = buttons.retry;
         if (
             clickX >= retry.x && clickX <= retry.x + retry.width &&
             clickY >= retry.y && clickY <= retry.y + retry.height
@@ -232,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('ユーザー名と4桁のピンコードを入力してください！');
                 return;
             }
-
             if (pincode.length !== 4 || isNaN(pincode)) {
                 alert('ピンコードは半角の4桁の数字で入力してください！');
                 return;
@@ -258,6 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
         keys.right = false;
         if (btnLeft) btnLeft.classList.remove('active');
         if (btnRight) btnRight.classList.remove('active');
+
         player.speed = normalSpeed;
         player.x = canvas.width / 2 - 40;
         items.length = 0;
@@ -302,6 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function spawnItem() {
         if (isGameOver) return;
+
         const itemX = Math.random() * (canvas.width - 40);
         const rand = Math.random();
 
@@ -315,41 +332,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (feverTimer > 0) {
             if (selectedDifficulty === 'easy') {
-                if (rand < 0.30) {
-                    type = 'star';
-                    speed = 8.5 + speedBonus;
-                } else if (rand < 0.70) {
-                    type = 'apple';
-                    speed = 6.0 + speedBonus;
-                } else {
-                    type = 'strawberry';
-                    speed = 5.0 + speedBonus;
-                }
+                if (rand < 0.30) { type = 'star'; speed = 8.5 + speedBonus; }
+                else if (rand < 0.70) { type = 'apple'; speed = 6.0 + speedBonus; }
+                else { type = 'strawberry'; speed = 5.0 + speedBonus; }
             } else if (selectedDifficulty === 'normal') {
-                if (rand < 0.25) {
-                    type = 'star';
-                    speed = 9.0 + speedBonus;
-                } else if (rand < 0.65) {
-                    type = 'apple';
-                    speed = 6.0 + speedBonus;
-                } else {
-                    type = 'strawberry';
-                    speed = 5.0 + speedBonus;
-                }
+                if (rand < 0.25) { type = 'star'; speed = 9.0 + speedBonus; }
+                else if (rand < 0.65) { type = 'apple'; speed = 6.0 + speedBonus; }
+                else { type = 'strawberry'; speed = 5.0 + speedBonus; }
             } else {
-                if (rand < 0.20) {
-                    type = 'star';
-                    speed = 10.0 + speedBonus;
-                } else if (rand < 0.45) {
-                    type = 'apple';
-                    speed = 7.0 + speedBonus;
-                } else if (rand < 0.70) {
-                    type = 'bomb';
-                    speed = 8.0 + speedBonus;
-                } else {
-                    type = 'strawberry';
-                    speed = 6.0 + speedBonus;
-                }
+                if (rand < 0.20) { type = 'star'; speed = 10.0 + speedBonus; }
+                else if (rand < 0.45) { type = 'apple'; speed = 7.0 + speedBonus; }
+                else if (rand < 0.70) { type = 'bomb'; speed = 8.0 + speedBonus; }
+                else { type = 'strawberry'; speed = 6.0 + speedBonus; }
             }
         } else {
             if (rand < 0.05) {
@@ -494,38 +488,41 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillStyle = timeLeft <= 5 ? '#ff4757' : '#ffffff';
         ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 130, 35);
 
-        // GAME OVER 表示
+        // GAME OVER 表示（スマホのときだけ文字もボタンも大きく表示）
         if (isGameOver) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+            const mobile = isMobileDevice();
+            const buttons = getGameOverButtons();
+
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.fillStyle = '#ff4757';
-            ctx.font = 'bold 50px sans-serif';
+            ctx.font = mobile ? 'bold 76px sans-serif' : 'bold 50px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width / 2, canvas.height / 2 - 50);
+            ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 80 : canvas.height / 2 - 50);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = '24px sans-serif';
-            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, canvas.height / 2);
+            ctx.font = mobile ? 'bold 38px sans-serif' : '24px sans-serif';
+            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, mobile ? canvas.height / 2 - 10 : canvas.height / 2);
 
             // 1. 「もう一度遊ぶ」ボタン描画
-            const retry = gameOverButtons.retry;
+            const retry = buttons.retry;
             ctx.fillStyle = '#ff4757';
             ctx.beginPath();
             if (ctx.roundRect) {
-                ctx.roundRect(retry.x, retry.y, retry.width, retry.height, 8);
+                ctx.roundRect(retry.x, retry.y, retry.width, retry.height, mobile ? 14 : 8);
             } else {
                 ctx.rect(retry.x, retry.y, retry.width, retry.height);
             }
             ctx.fill();
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 18px sans-serif';
-            ctx.fillText(retry.label, canvas.width / 2, retry.y + 27);
+            ctx.font = mobile ? 'bold 32px sans-serif' : 'bold 18px sans-serif';
+            ctx.fillText(retry.label, canvas.width / 2, retry.y + (mobile ? 49 : 27));
 
             // 2. 難易度切り替えボタン（EASY / NORMAL / HARD）描画
             ['easy', 'normal', 'hard'].forEach(diffKey => {
-                const btn = gameOverButtons[diffKey];
+                const btn = buttons[diffKey];
                 const isSelected = (selectedDifficulty === btn.diff);
 
                 if (isSelected) {
@@ -538,7 +535,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(btn.x, btn.y, btn.width, btn.height, 6);
+                    ctx.roundRect(btn.x, btn.y, btn.width, btn.height, mobile ? 10 : 6);
                 } else {
                     ctx.rect(btn.x, btn.y, btn.width, btn.height);
                 }
@@ -546,13 +543,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (isSelected) {
                     ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = mobile ? 3 : 2;
                     ctx.stroke();
                 }
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 14px sans-serif';
-                ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + 23);
+                ctx.font = mobile ? 'bold 24px sans-serif' : 'bold 14px sans-serif';
+                ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + (mobile ? 38 : 23));
             });
 
             ctx.textAlign = 'left';
