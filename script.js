@@ -151,6 +151,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let countTimer = null;
     let currentUsername = '';
 
+    // 1プレイ中に取ったアイテムの個数カウント
+    let itemStats = {
+        apple: 0,
+        strawberry: 0,
+        star: 0,
+        clock: 0,
+        chestnut: 0,
+        bomb: 0
+    };
+
     // 時計の出現数制限
     let clockSpawnedCount = 0;
     let maxClockCount = 3;
@@ -203,21 +213,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function getGameOverButtons() {
         if (isMobileDevice()) {
             return {
-                retry: { x: canvas.width / 2 - 210, y: canvas.height / 2 + 30, width: 420, height: 80, label: 'もう一度遊ぶ' },
-                easy: { x: canvas.width / 2 - 295, y: canvas.height / 2 + 128, width: 180, height: 62, diff: 'easy', label: 'EASY' },
-                normal: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 128, width: 180, height: 62, diff: 'normal', label: 'NORMAL' },
-                hard: { x: canvas.width / 2 + 115, y: canvas.height / 2 + 128, width: 180, height: 62, diff: 'hard', label: 'HARD' },
-                guide: { x: canvas.width / 2 - 295, y: canvas.height / 2 + 208, width: 280, height: 58, label: 'アイテム説明' },
-                home: { x: canvas.width / 2 + 15, y: canvas.height / 2 + 208, width: 280, height: 58, label: 'ホームへ戻る' }
+                retry: { x: canvas.width / 2 - 210, y: canvas.height / 2 + 65, width: 420, height: 74, label: 'もう一度遊ぶ' },
+                easy: { x: canvas.width / 2 - 295, y: canvas.height / 2 + 153, width: 180, height: 58, diff: 'easy', label: 'EASY' },
+                normal: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 153, width: 180, height: 58, diff: 'normal', label: 'NORMAL' },
+                hard: { x: canvas.width / 2 + 115, y: canvas.height / 2 + 153, width: 180, height: 58, diff: 'hard', label: 'HARD' },
+                guide: { x: canvas.width / 2 - 295, y: canvas.height / 2 + 225, width: 280, height: 54, label: 'アイテム説明' },
+                home: { x: canvas.width / 2 + 15, y: canvas.height / 2 + 225, width: 280, height: 54, label: 'ホームへ戻る' }
             };
         }
         return {
-            retry: { x: canvas.width / 2 - 95, y: canvas.height / 2 + 52, width: 190, height: 42, label: 'もう一度遊ぶ' },
-            easy: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 108, width: 90, height: 34, diff: 'easy', label: 'EASY' },
-            normal: { x: canvas.width / 2 - 45, y: canvas.height / 2 + 108, width: 90, height: 34, diff: 'normal', label: 'NORMAL' },
-            hard: { x: canvas.width / 2 + 55, y: canvas.height / 2 + 108, width: 90, height: 34, diff: 'hard', label: 'HARD' },
-            guide: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 156, width: 140, height: 36, label: 'アイテム説明' },
-            home: { x: canvas.width / 2 + 5, y: canvas.height / 2 + 156, width: 140, height: 36, label: 'ホームへ戻る' }
+            retry: { x: canvas.width / 2 - 95, y: canvas.height / 2 + 78, width: 190, height: 40, label: 'もう一度遊ぶ' },
+            easy: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 130, width: 90, height: 34, diff: 'easy', label: 'EASY' },
+            normal: { x: canvas.width / 2 - 45, y: canvas.height / 2 + 130, width: 90, height: 34, diff: 'normal', label: 'NORMAL' },
+            hard: { x: canvas.width / 2 + 55, y: canvas.height / 2 + 130, width: 90, height: 34, diff: 'hard', label: 'HARD' },
+            guide: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 176, width: 140, height: 34, label: 'アイテム説明' },
+            home: { x: canvas.width / 2 + 5, y: canvas.height / 2 + 176, width: 140, height: 34, label: 'ホームへ戻る' }
         };
     }
 
@@ -396,6 +406,14 @@ document.addEventListener('DOMContentLoaded', () => {
         feverTimer = 0;
         isNewRecord = false;
         footPopups.length = 0;
+        itemStats = {
+            apple: 0,
+            strawberry: 0,
+            star: 0,
+            clock: 0,
+            chestnut: 0,
+            bomb: 0
+        };
         keys.left = false;
         keys.right = false;
         if (btnLeft) btnLeft.classList.remove('active');
@@ -554,6 +572,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 player.y < item.y + item.height - pad &&
                 player.y + player.height > item.y + pad
             ) {
+                // 獲得アイテムの回数を記録
+                if (itemStats[item.type] !== undefined) {
+                    itemStats[item.type]++;
+                }
+
                 // フィーバー中の得点・減点倍率（EASY:1倍 / NORMAL:プラス1.2倍 / HARD:プラス2.0倍・マイナス1.5倍）
                 let plusMultiplier = 1.0;
                 let minusMultiplier = 1.0;
@@ -629,6 +652,35 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // いがぐりの丸型切り抜き描画ヘルパー（ゲーム中＆リザルト共通）
+    function drawChestnutIcon(x, y, size) {
+        const img = itemImages.chestnut;
+        if (!img || !img.complete || img.naturalWidth === 0) return;
+
+        ctx.save();
+        const centerX = x + size / 2;
+        const centerY = y + size / 2;
+        const radius = size / 2;
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(186, 220, 88, 0.25)';
+        ctx.fill();
+        ctx.strokeStyle = '#badc58';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius - 1, 0, Math.PI * 2);
+        ctx.clip();
+
+        const cropSize = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - cropSize) / 2;
+        const sy = (img.naturalHeight - cropSize) / 2;
+        ctx.drawImage(img, sx, sy, cropSize, cropSize, x, y, size, size);
+        ctx.restore();
+    }
+
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -680,29 +732,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!img || !img.complete) return;
 
             if (item.type === 'chestnut' && img.naturalWidth > 0 && img.naturalHeight > 0) {
-                // いがぐり専用描画：横長画像の左右の黒余白を切り抜き、丸く表示＋黄緑の輪郭光彩で視認性アップ
                 ctx.save();
-                const centerX = item.x + item.width / 2;
-                const centerY = item.y + item.height / 2;
-                const radius = item.width / 2;
-
-                // 目立つ黄緑色の輪郭グロー
                 ctx.shadowBlur = 12;
                 ctx.shadowColor = '#badc58';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius - 2, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(186, 220, 88, 0.25)';
-                ctx.fill();
-
-                // 丸く切り抜いて中央のいがぐり部分を拡大描画
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-                ctx.clip();
-
-                const cropSize = Math.min(img.naturalWidth, img.naturalHeight);
-                const sx = (img.naturalWidth - cropSize) / 2;
-                const sy = (img.naturalHeight - cropSize) / 2;
-                ctx.drawImage(img, sx, sy, cropSize, cropSize, item.x, item.y, item.width, item.height);
+                drawChestnutIcon(item.x, item.y, item.width);
                 ctx.restore();
             } else {
                 ctx.drawImage(img, item.x, item.y, item.width, item.height);
@@ -762,28 +795,79 @@ document.addEventListener('DOMContentLoaded', () => {
             const buttons = getGameOverButtons();
             const diffBest = bestScores[selectedDifficulty] || 0;
 
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.82)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.fillStyle = '#ff4757';
-            ctx.font = mobile ? 'bold 80px sans-serif' : 'bold 48px sans-serif';
+            ctx.font = mobile ? 'bold 76px sans-serif' : 'bold 46px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 145 : canvas.height / 2 - 85);
+            ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 190 : canvas.height / 2 - 125);
 
             // 新記録のときは金色で「NEW RECORD!」を表示
             if (isNewRecord && score > 0) {
                 ctx.fillStyle = '#fffa65';
-                ctx.font = mobile ? 'bold 36px sans-serif' : 'bold 20px sans-serif';
-                ctx.fillText('★ NEW RECORD! ★', canvas.width / 2, mobile ? canvas.height / 2 - 88 : canvas.height / 2 - 45);
+                ctx.font = mobile ? 'bold 34px sans-serif' : 'bold 20px sans-serif';
+                ctx.fillText('★ NEW RECORD! ★', canvas.width / 2, mobile ? canvas.height / 2 - 135 : canvas.height / 2 - 86);
             }
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = mobile ? 'bold 38px sans-serif' : '22px sans-serif';
-            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, mobile ? canvas.height / 2 - 38 : canvas.height / 2 - 12);
+            ctx.font = mobile ? 'bold 36px sans-serif' : '22px sans-serif';
+            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, mobile ? canvas.height / 2 - 88 : canvas.height / 2 - 52);
 
             ctx.fillStyle = '#7bed9f';
-            ctx.font = mobile ? 'bold 30px sans-serif' : '18px sans-serif';
-            ctx.fillText(`${selectedDifficulty.toUpperCase()} 自己ベスト: ${diffBest}`, canvas.width / 2, mobile ? canvas.height / 2 + 8 : canvas.height / 2 + 20);
+            ctx.font = mobile ? 'bold 28px sans-serif' : '18px sans-serif';
+            ctx.fillText(`${selectedDifficulty.toUpperCase()} 自己ベスト: ${diffBest}`, canvas.width / 2, mobile ? canvas.height / 2 - 46 : canvas.height / 2 - 22);
+
+            // 獲得アイテム内訳バー（6種類のアイコン＋個数を横1列に並べる）
+            const statList = [
+                { key: 'apple', color: '#7bed9f' },
+                { key: 'strawberry', color: '#7bed9f' },
+                { key: 'star', color: '#fffa65' },
+                { key: 'clock', color: '#70a1ff' },
+                { key: 'chestnut', color: '#ff6b81' },
+                { key: 'bomb', color: '#ff4757' }
+            ];
+            const barWidth = mobile ? 720 : 520;
+            const barHeight = mobile ? 66 : 46;
+            const barX = (canvas.width - barWidth) / 2;
+            const barY = mobile ? canvas.height / 2 - 22 : canvas.height / 2 + 4;
+
+            ctx.fillStyle = 'rgba(47, 54, 64, 0.9)';
+            ctx.beginPath();
+            if (ctx.roundRect) {
+                ctx.roundRect(barX, barY, barWidth, barHeight, 10);
+            } else {
+                ctx.rect(barX, barY, barWidth, barHeight);
+            }
+            ctx.fill();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+
+            const slotWidth = barWidth / statList.length;
+            const iconSize = mobile ? 34 : 24;
+
+            statList.forEach((entry, idx) => {
+                const slotCenterX = barX + slotWidth * idx + slotWidth / 2;
+                const iconX = slotCenterX - (mobile ? 44 : 30);
+                const iconY = barY + (barHeight - iconSize) / 2;
+
+                if (entry.key === 'chestnut') {
+                    drawChestnutIcon(iconX, iconY, iconSize);
+                } else {
+                    const img = itemImages[entry.key];
+                    if (img && img.complete) {
+                        ctx.drawImage(img, iconX, iconY, iconSize, iconSize);
+                    }
+                }
+
+                ctx.fillStyle = entry.color;
+                ctx.font = mobile ? 'bold 26px sans-serif' : 'bold 16px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(`×${itemStats[entry.key]}`, iconX + iconSize + (mobile ? 6 : 4), barY + (mobile ? 42 : 29));
+            });
+
+            ctx.textAlign = 'center';
 
             // 1. 「もう一度遊ぶ」ボタン描画
             const retry = buttons.retry;
@@ -797,8 +881,8 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fill();
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = mobile ? 'bold 36px sans-serif' : 'bold 18px sans-serif';
-            ctx.fillText(retry.label, canvas.width / 2, retry.y + (mobile ? 53 : 27));
+            ctx.font = mobile ? 'bold 34px sans-serif' : 'bold 18px sans-serif';
+            ctx.fillText(retry.label, canvas.width / 2, retry.y + (mobile ? 49 : 26));
 
             // 2. 難易度切り替えボタン（EASY / NORMAL / HARD）描画
             ['easy', 'normal', 'hard'].forEach(diffKey => {
@@ -828,8 +912,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = mobile ? 'bold 28px sans-serif' : 'bold 14px sans-serif';
-                ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + (mobile ? 42 : 23));
+                ctx.font = mobile ? 'bold 26px sans-serif' : 'bold 14px sans-serif';
+                ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + (mobile ? 38 : 22));
             });
 
             // 3. 「アイテム説明」＆「ホームへ戻る」ボタン描画（横並び）
@@ -848,8 +932,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = mobile ? 'bold 26px sans-serif' : 'bold 14px sans-serif';
-                ctx.fillText(subBtn.label, subBtn.x + subBtn.width / 2, subBtn.y + (mobile ? 38 : 23));
+                ctx.font = mobile ? 'bold 25px sans-serif' : 'bold 14px sans-serif';
+                ctx.fillText(subBtn.label, subBtn.x + subBtn.width / 2, subBtn.y + (mobile ? 35 : 22));
             });
 
             ctx.textAlign = 'left';

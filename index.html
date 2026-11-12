@@ -13,9 +13,6 @@
 
         <div class="input-group">
             <input type="text" id="username" placeholder="ユーザー名（空欄ならGUEST）" maxlength="12">
-            <!-- ピンコードは今回未使用のためコメントアウト
-            <input type="password" id="pincode" placeholder="4桁のピンコード" maxlength="4" inputmode="numeric">
-            -->
         </div>
 
         <div class="difficulty-select">
@@ -33,10 +30,13 @@
         </div>
     </div>
 
-    <!-- アイテム説明画面（「アイテム説明」ボタンを押したときだけ表示） -->
+    <!-- アイテム説明画面 -->
     <div id="guideScreen" style="display: none;">
         <h2>アイテム説明</h2>
-        <p class="guide-note">フルーツを連続キャッチでコンボ発生（最大5倍）！</p>
+        <p class="guide-note">
+            連続キャッチで<strong>最大5倍</strong>！<br>
+            スター中は得点UP（NORMAL <strong>1.2倍</strong> / HARD <strong>2倍</strong>）
+        </p>
 
         <div class="guide-list">
             <div class="guide-row plus">
@@ -46,7 +46,7 @@
                         <span class="item-name">りんご</span>
                         <span class="item-badge plus">+5点</span>
                     </div>
-                    <p class="item-desc">高得点のフルーツ。連続で取ると得点アップ！</p>
+                    <p class="item-desc">高得点フルーツ。コンボでさらに得点UP！</p>
                 </div>
             </div>
 
@@ -57,7 +57,7 @@
                         <span class="item-name">いちご</span>
                         <span class="item-badge plus">+3点</span>
                     </div>
-                    <p class="item-desc">基本のフルーツ。コンボをつないで稼ごう！</p>
+                    <p class="item-desc">基本フルーツ。連続で取ってコンボをつなごう！</p>
                 </div>
             </div>
 
@@ -66,9 +66,9 @@
                 <div class="guide-info">
                     <div class="guide-header">
                         <span class="item-name">スター</span>
-                        <span class="item-badge special">フィーバー突入！</span>
+                        <span class="item-badge special">フィーバー！</span>
                     </div>
-                    <p class="item-desc">移動スピードUP＆アイテムが大量に降ってくる！</p>
+                    <p class="item-desc">速度UP＆大量落下！NORMAL・HARDは得点倍率もUP。</p>
                 </div>
             </div>
 
@@ -77,7 +77,7 @@
                 <div class="guide-info">
                     <div class="guide-header">
                         <span class="item-name">時計</span>
-                        <span class="item-badge special">残り時間 +5秒</span>
+                        <span class="item-badge special">+5秒</span>
                     </div>
                     <p class="item-desc">制限時間が5秒延長されるレアアイテム。</p>
                 </div>
@@ -90,7 +90,7 @@
                         <span class="item-name">いがぐり</span>
                         <span class="item-badge danger">-1点 / 3秒しびれ</span>
                     </div>
-                    <p class="item-desc">当たるとコンボが途切れ、3秒間動けなくなる。</p>
+                    <p class="item-desc">コンボが途切れ、3秒間動けなくなる。</p>
                 </div>
             </div>
 
@@ -101,7 +101,7 @@
                         <span class="item-name">爆弾</span>
                         <span class="item-badge danger">-5点 / 5秒しびれ</span>
                     </div>
-                    <p class="item-desc">大ダメージ＆5秒間動けなくなる危険物！</p>
+                    <p class="item-desc">コンボリセット＆大ダメージ＋5秒間しびれる！</p>
                 </div>
             </div>
         </div>

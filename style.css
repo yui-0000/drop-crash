@@ -24,7 +24,7 @@ body {
 #authScreen,
 #guideScreen {
     background-color: #2f3640;
-    padding: 26px 28px;
+    padding: 24px 24px;
     border-radius: 16px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
     text-align: center;
@@ -51,7 +51,12 @@ body {
 .guide-note {
     font-size: 13px;
     color: #d2dae2;
+    line-height: 1.5;
     margin-bottom: 14px;
+}
+
+.guide-note strong {
+    color: #fffa65;
 }
 
 .input-group {
@@ -190,7 +195,7 @@ body {
     align-items: center;
     gap: 12px;
     background-color: #1e272e;
-    padding: 9px 12px;
+    padding: 10px 12px;
     border-radius: 10px;
     border: 1px solid #485460;
 }
@@ -269,16 +274,16 @@ body {
     line-height: 1.35;
 }
 
-/* PC画面（横幅768px以上）でのアイテム説明拡大調整 */
+/* PC画面（横幅768px以上）でのアイテム説明調整：2列グリッドでスクロールなしに収める */
 @media (min-width: 768px) {
     #guideScreen {
-        max-width: 680px;
-        padding: 34px 40px;
+        max-width: 760px;
+        padding: 32px 36px;
     }
 
     #guideScreen h2 {
-        font-size: 32px;
-        margin-bottom: 10px;
+        font-size: 30px;
+        margin-bottom: 8px;
     }
 
     .guide-note {
@@ -287,37 +292,40 @@ body {
     }
 
     .guide-list {
-        gap: 12px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
     }
 
     .guide-row {
-        padding: 14px 18px;
-        gap: 16px;
+        padding: 14px 16px;
+        gap: 14px;
     }
 
     .guide-row img {
-        width: 52px;
-        height: 52px;
+        width: 48px;
+        height: 48px;
     }
 
     .item-name {
-        font-size: 19px;
+        font-size: 18px;
     }
 
     .item-badge {
-        font-size: 15px;
-        padding: 4px 12px;
+        font-size: 14px;
+        padding: 3px 10px;
     }
 
     .item-desc {
-        font-size: 15px;
-        line-height: 1.5;
+        font-size: 14px;
+        line-height: 1.45;
     }
 
     .back-btn {
-        margin-top: 22px;
-        padding: 14px;
-        font-size: 18px;
+        max-width: 320px;
+        margin: 24px auto 0;
+        padding: 13px;
+        font-size: 17px;
     }
 }
 
@@ -375,7 +383,6 @@ body {
         touch-action: none;
     }
 
-    /* ボタンの周囲25pxまで透明な当たり判定を拡張 */
     .touch-btn::before {
         content: '';
         position: absolute;
