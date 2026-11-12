@@ -120,7 +120,7 @@ input {
   transform: scale(0.98);
 }
 
-/* ゲーム画面（スマホ・タブレットでも画面幅に合わせて自動縮小） */
+/* ゲーム画面（キャンバス） */
 canvas {
   border: 2px solid #ffffff;
   background-color: #000000;
@@ -129,7 +129,7 @@ canvas {
   width: 100%;
   max-width: 1000px;
   height: auto;
-  max-height: calc(100dvh - 150px);
+  max-height: calc(100dvh - 120px);
   object-fit: contain;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   touch-action: none;
@@ -141,10 +141,10 @@ canvas {
 .touch-controls {
   display: none;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px;
   width: 100%;
   max-width: 1000px;
-  margin: 12px auto 0;
+  margin: 8px auto 0;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
@@ -159,13 +159,13 @@ canvas {
 
 .touch-btn {
   flex: 1;
-  height: 68px;
-  font-size: 28px;
+  height: 76px;
+  font-size: 32px;
   font-weight: bold;
   color: #ffffff;
   background-color: #2b2b36;
   border: 2px solid #ff4757;
-  border-radius: 12px;
+  border-radius: 14px;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
@@ -179,90 +179,106 @@ canvas {
 }
 
 /* =========================================
-   スマホ向け：リザルト（「もう一回」画面）とボタンの拡大
+   スマホ向け：余計な上の表示を消してゲーム画面を最大化
    ========================================= */
-@media (max-width: 768px), (hover: none) and (pointer: coarse) {
-  .auth-card,
-  #resultScreen,
-  .result-card,
-  .modal-content {
-    max-width: 94vw;
+@media (max-width: 900px), (hover: none) and (pointer: coarse) {
+  body {
+    padding: 4px;
+    overflow: hidden;
+  }
+
+  /* スマホ時は上の「DROP CRASH」タイトルを消してゲーム領域を広くする */
+  .title {
+    display: none;
+  }
+
+  /* ゲーム開始前はログインカードが大きく見やすく出るようにする */
+  .auth-card {
+    width: 94vw;
+    max-width: 440px;
     padding: 28px 20px;
     font-size: 18px;
   }
 
-  .auth-card h2,
-  #resultScreen h2,
-  .result-card h2 {
+  .auth-card h2 {
     font-size: 24px;
     margin-bottom: 18px;
   }
 
-  .auth-card p,
-  #resultScreen p,
-  .result-card p {
-    font-size: 18px;
-    line-height: 1.6;
-    margin-bottom: 14px;
-  }
-
-  /* 「もう一回」「ゲームスタート」などのボタンを大きく押しやすく */
-  .start-btn,
-  #restartBtn,
-  .restart-btn,
-  .retry-btn,
-  #resultScreen button,
-  .result-card button {
+  input {
     width: 100%;
-    min-height: 58px;
-    padding: 16px 20px;
-    font-size: 21px;
-    border-radius: 12px;
-    margin-top: 10px;
+    padding: 14px;
+    font-size: 18px;
   }
 
   .diff-btn {
     padding: 14px 0;
     font-size: 16px;
   }
+
+  .start-btn {
+    min-height: 58px;
+    font-size: 22px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  /* ゲーム画面を画面いっぱいに拡大 */
+  canvas {
+    width: 98vw;
+    max-width: 98vw;
+    max-height: calc(100dvh - 96px);
+    border-width: 1px;
+  }
+
+  .touch-controls {
+    width: 98vw;
+    max-width: 98vw;
+    margin-top: 6px;
+  }
+
+  .touch-btn {
+    height: 76px;
+    font-size: 32px;
+  }
 }
 
 /* =========================================
-   スマホ横向き（高さが低い画面）で上下が切れないように調整
+   スマホ横向き（高さが低い画面）専用最適化
    ========================================= */
 @media (max-height: 550px) and (orientation: landscape) {
   body {
-    padding: 6px 12px;
+    padding: 2px 6px;
     overflow: hidden;
   }
 
   .title {
-    font-size: 20px;
-    margin-bottom: 6px;
+    display: none;
   }
 
   canvas {
     width: auto;
-    max-width: 100%;
-    max-height: calc(100dvh - 102px);
+    max-width: 98vw;
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
   }
 
   .touch-controls {
-    margin-top: 6px;
-    gap: 12px;
+    width: 98vw;
+    margin-top: 4px;
+    gap: 10px;
   }
 
   .touch-btn {
-    height: 48px;
-    font-size: 22px;
+    height: 52px;
+    font-size: 24px;
+    border-radius: 10px;
   }
 
-  .auth-card,
-  #resultScreen,
-  .result-card {
+  .auth-card {
     max-width: 460px;
-    padding: 16px 20px;
-    max-height: 92dvh;
+    padding: 14px 18px;
+    max-height: 94dvh;
     overflow-y: auto;
   }
 }
