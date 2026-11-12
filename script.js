@@ -8,6 +8,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const pincodeInput = document.getElementById('pincode');
     const diffButtons = document.querySelectorAll('.diff-btn');
 
+    // タッチ操作用UI（スマホ・タブレット専用）
+    const touchControls = document.getElementById('touchControls');
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+
     // 選択された難易度（デフォルト：normal）
     let selectedDifficulty = 'normal';
 
@@ -91,23 +96,109 @@ document.addEventListener('DOMContentLoaded', () => {
         hard: { x: canvas.width / 2 + 55, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'hard', label: 'HARD' }
     };
 
+    // パソコン用キーボード操作（矢印キーのみ）
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = true;
-        if (e.key === 'ArrowRight' || e.key === 'd') keys.right = true;
+        if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            keys.left = true;
+        }
+        if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            keys.right = true;
+        }
     });
 
     window.addEventListener('keyup', (e) => {
-        if (e.key === 'ArrowLeft' || e.key === 'a') keys.left = false;
-        if (e.key === 'ArrowRight' || e.key === 'd') keys.right = false;
+        if (e.key === 'ArrowLeft') keys.left = false;
+        if (e.key === 'ArrowRight') keys.right = false;
     });
 
-    // キャンバスクリック判定（ゲームオーバー画面のボタン用）
+    // スマホ・タブレット専用 左右タッチボタン操作（マウス操作は無効）
+    function bindTouchButton(button, direction) {
+        if (!button) return;
+
+        const press = (e) => {
+            e.preventDefault();
+            keys[direction] = true;
+            button.classList.add('active');
+        };
+
+        const release = (e) => {
+            e.preventDefault();
+            keys[direction] = false;
+            button.classList.remove('active');
+        };
+
+        button.addEventListener('touchstart', press, { passive: false });
+        button.addEventListener('touchend', release, { passive: false });
+        button.addEventListener('touchcancel', release, { passive: false });
+    }
+
+    bindTouchButton(btnLeft, 'left');
+    bindTouchButton(btnRight, 'right');
+
+    // スマホ・タブレット専用：ゲーム画面（Canvas）の左半分・右半分を直接タップして左右移動
+    function updateCanvasTouchDirection(e) {
+        if (isGameOver) return;
+        e.preventDefault();
+
+        const rect = canvas.getBoundingClientRect();
+        let touchLeft = false;
+        let touchRight = false;
+
+        for (let i = 0; i < e.touches.length; i++) {
+            const touchX = e.touches[i].clientX - rect.left;
+            if (touchX < rect.width / 2) {
+                touchLeft = true;
+            } else {
+                touchRight = true;
+            }
+        }
+
+        keys.left = touchLeft;
+        keys.right = touchRight;
+        if (btnLeft) btnLeft.classList.toggle('active', touchLeft);
+        if (btnRight) btnRight.classList.toggle('active', touchRight);
+    }
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (isGameOver) return;
+        updateCanvasTouchDirection(e);
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (isGameOver) return;
+        updateCanvasTouchDirection(e);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (isGameOver) return;
+        if (e.touches.length === 0) {
+            keys.left = false;
+            keys.right = false;
+            if (btnLeft) btnLeft.classList.remove('active');
+            if (btnRight) btnRight.classList.remove('active');
+        } else {
+            updateCanvasTouchDirection(e);
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchcancel', () => {
+        keys.left = false;
+        keys.right = false;
+        if (btnLeft) btnLeft.classList.remove('active');
+        if (btnRight) btnRight.classList.remove('active');
+    });
+
+    // キャンバスクリック判定（ゲームオーバー画面のボタン用・スマホ縮小表示の座標補正付き）
     canvas.addEventListener('click', (e) => {
         if (!isGameOver) return;
 
         const rect = canvas.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickY = e.clientY - rect.top;
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const clickX = (e.clientX - rect.left) * scaleX;
+        const clickY = (e.clientY - rect.top) * scaleY;
 
         // 難易度切り替えボタン判定
         ['easy', 'normal', 'hard'].forEach(diffKey => {
@@ -117,6 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 clickY >= btn.y && clickY <= btn.y + btn.height
             ) {
                 syncDiffButtons(btn.diff);
+                draw();
             }
         });
 
@@ -149,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUsername = username;
             authScreen.style.display = 'none';
             canvas.style.display = 'block';
+            if (touchControls) touchControls.classList.add('is-visible');
 
             resetAndStartGame();
         };
@@ -161,6 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
         clockSpawnedCount = 0;
         stunTimer = 0;
         feverTimer = 0;
+        keys.left = false;
+        keys.right = false;
+        if (btnLeft) btnLeft.classList.remove('active');
+        if (btnRight) btnRight.classList.remove('active');
         player.speed = normalSpeed;
         player.x = canvas.width / 2 - 40;
         items.length = 0;
@@ -338,6 +435,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function endGame() {
         isGameOver = true;
+        keys.left = false;
+        keys.right = false;
+        if (btnLeft) btnLeft.classList.remove('active');
+        if (btnRight) btnRight.classList.remove('active');
         clearInterval(spawnTimer);
         clearInterval(countTimer);
     }
@@ -427,7 +528,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const btn = gameOverButtons[diffKey];
                 const isSelected = (selectedDifficulty === btn.diff);
 
-                // 選択中かどうかで色を変更
                 if (isSelected) {
                     if (btn.diff === 'easy') ctx.fillStyle = '#2ed573';
                     else if (btn.diff === 'normal') ctx.fillStyle = '#ffa502';
@@ -444,7 +544,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 ctx.fill();
 
-                // 選択中の場合は白枠をつける
                 if (isSelected) {
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;

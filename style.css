@@ -6,109 +6,172 @@
 }
 
 body {
-    background-color: #1e1e2e;
+    background-color: #1e1e28;
     color: #ffffff;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
+    padding: 16px;
 }
 
-#game-container {
+#gameContainer {
     text-align: center;
     width: 100%;
-    max-width: 420px;
-    padding: 10px;
+    max-width: 1000px;
 }
 
-h1 {
-    margin-bottom: 15px;
+.title {
     color: #ff4757;
+    font-size: clamp(28px, 5vw, 36px);
     letter-spacing: 2px;
+    margin-bottom: 15px;
 }
 
-.card {
-    background: #2b2b3d;
-    padding: 20px;
+.auth-card {
+    background-color: #2b2b36;
+    padding: 30px;
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+    width: 100%;
+    max-width: 340px;
+    margin: 0 auto;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
-.input-group input {
-    width: 100%;
+.auth-card h2 {
+    font-size: 20px;
+    margin-bottom: 20px;
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+input {
+    width: 90%;
     padding: 12px;
-    margin-bottom: 10px;
-    border: none;
     border-radius: 6px;
+    border: none;
     font-size: 16px;
     text-align: center;
 }
 
-button {
+.diff-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.difficulty-group {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.diff-btn {
+    flex: 1;
+    margin: 0 4px;
+    padding: 10px 0;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-color: #3d3d4e;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.diff-btn.active {
+    border-color: #ffffff;
+    transform: scale(1.05);
+}
+
+.diff-btn[data-diff="easy"].active {
+    background-color: #2ed573;
+}
+
+.diff-btn[data-diff="normal"].active {
+    background-color: #ffa502;
+}
+
+.diff-btn[data-diff="hard"].active {
+    background-color: #ff4757;
+}
+
+.start-btn {
     width: 100%;
     padding: 12px;
-    background-color: #ff4757;
-    color: white;
-    border: none;
     border-radius: 6px;
+    border: none;
+    background-color: #ff4757;
+    color: #ffffff;
     font-size: 18px;
     font-weight: bold;
     cursor: pointer;
     transition: 0.2s;
 }
 
-button:active {
+.start-btn:hover {
+    background-color: #ff6b81;
+}
+
+.start-btn:active {
     transform: scale(0.98);
 }
 
-#score-board {
-    display: flex;
-    justify-content: space-between;
-    font-size: 20px;
-    font-weight: bold;
-    margin-bottom: 10px;
-    background: #2b2b3d;
-    padding: 10px 20px;
-    border-radius: 8px;
-}
-
+/* ゲーム画面（スマホ・タブレットでも画面幅に合わせて自動縮小） */
 canvas {
-    background: #11111b;
-    border: 3px solid #ff4757;
-    border-radius: 8px;
-    display: block;
+    border: 2px solid #ffffff;
+    background-color: #000000;
+    display: none;
     margin: 0 auto;
+    width: 100%;
+    max-width: 1000px;
+    height: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-#touch-controls {
-    display: flex;
+/* タッチ操作ボタン（PCでは常に非表示） */
+.touch-controls {
+    display: none;
     justify-content: space-between;
-    margin-top: 10px;
-    gap: 10px;
+    gap: 16px;
+    width: 100%;
+    max-width: 1000px;
+    margin: 12px auto 0;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
 }
 
-#touch-controls button {
-    font-size: 24px;
-    padding: 15px;
-    background: #313244;
+/* スマホ・タブレットなどタッチ端末かつゲーム開始後のみ表示 */
+@media (hover: none) and (pointer: coarse) {
+    .touch-controls.is-visible {
+        display: flex;
+    }
 }
 
-.hidden {
-    display: none !important;
+.touch-btn {
+    flex: 1;
+    height: 68px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #2b2b36;
+    border: 2px solid #ff4757;
+    border-radius: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: background-color 0.1s, transform 0.1s;
 }
 
-.msg {
-    margin-top: 10px;
-    color: #ff6b6b;
-    font-size: 14px;
-}
-
-ol {
-    text-align: left;
-    margin: 15px 0;
-    padding-left: 20px;
-}
-
-li {
-    margin-bottom: 5px;
+.touch-btn:active,
+.touch-btn.active {
+    background-color: #ff4757;
+    transform: scale(0.98);
 }
