@@ -1,177 +1,268 @@
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    font-family: 'Helvetica Neue', Arial, sans-serif;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Helvetica Neue', Arial, sans-serif;
 }
 
 body {
-    background-color: #1e1e28;
-    color: #ffffff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    padding: 16px;
+  background-color: #1e1e28;
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100dvh;
+  padding: 16px;
 }
 
 #gameContainer {
-    text-align: center;
-    width: 100%;
-    max-width: 1000px;
+  text-align: center;
+  width: 100%;
+  max-width: 1000px;
 }
 
 .title {
-    color: #ff4757;
-    font-size: clamp(28px, 5vw, 36px);
-    letter-spacing: 2px;
-    margin-bottom: 15px;
+  color: #ff4757;
+  font-size: clamp(28px, 5vw, 36px);
+  letter-spacing: 2px;
+  margin-bottom: 15px;
 }
 
 .auth-card {
-    background-color: #2b2b36;
-    padding: 30px;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 340px;
-    margin: 0 auto;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+  background-color: #2b2b36;
+  padding: 30px;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
 .auth-card h2 {
-    font-size: 20px;
-    margin-bottom: 20px;
+  font-size: 20px;
+  margin-bottom: 20px;
 }
 
 .input-group {
-    margin-bottom: 15px;
+  margin-bottom: 15px;
 }
 
 input {
-    width: 90%;
-    padding: 12px;
-    border-radius: 6px;
-    border: none;
-    font-size: 16px;
-    text-align: center;
+  width: 90%;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  font-size: 16px;
+  text-align: center;
 }
 
 .diff-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: bold;
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
 }
 
 .difficulty-group {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
 }
 
 .diff-btn {
-    flex: 1;
-    margin: 0 4px;
-    padding: 10px 0;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    background-color: #3d3d4e;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
+  flex: 1;
+  margin: 0 4px;
+  padding: 10px 0;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-color: #3d3d4e;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
 .diff-btn.active {
-    border-color: #ffffff;
-    transform: scale(1.05);
+  border-color: #ffffff;
+  transform: scale(1.05);
 }
 
 .diff-btn[data-diff="easy"].active {
-    background-color: #2ed573;
+  background-color: #2ed573;
 }
 
 .diff-btn[data-diff="normal"].active {
-    background-color: #ffa502;
+  background-color: #ffa502;
 }
 
 .diff-btn[data-diff="hard"].active {
-    background-color: #ff4757;
+  background-color: #ff4757;
 }
 
 .start-btn {
-    width: 100%;
-    padding: 12px;
-    border-radius: 6px;
-    border: none;
-    background-color: #ff4757;
-    color: #ffffff;
-    font-size: 18px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: 0.2s;
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  border: none;
+  background-color: #ff4757;
+  color: #ffffff;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
 }
 
 .start-btn:hover {
-    background-color: #ff6b81;
+  background-color: #ff6b81;
 }
 
 .start-btn:active {
-    transform: scale(0.98);
+  transform: scale(0.98);
 }
 
 /* ゲーム画面（スマホ・タブレットでも画面幅に合わせて自動縮小） */
 canvas {
-    border: 2px solid #ffffff;
-    background-color: #000000;
-    display: none;
-    margin: 0 auto;
-    width: 100%;
-    max-width: 1000px;
-    height: auto;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-    touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
+  border: 2px solid #ffffff;
+  background-color: #000000;
+  display: none;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 1000px;
+  height: auto;
+  max-height: calc(100dvh - 150px);
+  object-fit: contain;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* タッチ操作ボタン（PCでは常に非表示） */
 .touch-controls {
-    display: none;
-    justify-content: space-between;
-    gap: 16px;
-    width: 100%;
-    max-width: 1000px;
-    margin: 12px auto 0;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
+  display: none;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  max-width: 1000px;
+  margin: 12px auto 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 /* スマホ・タブレットなどタッチ端末かつゲーム開始後のみ表示 */
 @media (hover: none) and (pointer: coarse) {
-    .touch-controls.is-visible {
-        display: flex;
-    }
+  .touch-controls.is-visible {
+    display: flex;
+  }
 }
 
 .touch-btn {
-    flex: 1;
-    height: 68px;
-    font-size: 28px;
-    font-weight: bold;
-    color: #ffffff;
-    background-color: #2b2b36;
-    border: 2px solid #ff4757;
-    border-radius: 12px;
-    user-select: none;
-    -webkit-user-select: none;
-    touch-action: manipulation;
-    transition: background-color 0.1s, transform 0.1s;
+  flex: 1;
+  height: 68px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #ffffff;
+  background-color: #2b2b36;
+  border: 2px solid #ff4757;
+  border-radius: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  transition: background-color 0.1s, transform 0.1s;
 }
 
 .touch-btn:active,
 .touch-btn.active {
-    background-color: #ff4757;
-    transform: scale(0.98);
+  background-color: #ff4757;
+  transform: scale(0.98);
+}
+
+/* =========================================
+   スマホ向け：リザルト（「もう一回」画面）とボタンの拡大
+   ========================================= */
+@media (max-width: 768px), (hover: none) and (pointer: coarse) {
+  .auth-card,
+  #resultScreen,
+  .result-card,
+  .modal-content {
+    max-width: 94vw;
+    padding: 28px 20px;
+    font-size: 18px;
+  }
+
+  .auth-card h2,
+  #resultScreen h2,
+  .result-card h2 {
+    font-size: 24px;
+    margin-bottom: 18px;
+  }
+
+  .auth-card p,
+  #resultScreen p,
+  .result-card p {
+    font-size: 18px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+  }
+
+  /* 「もう一回」「ゲームスタート」などのボタンを大きく押しやすく */
+  .start-btn,
+  #restartBtn,
+  .restart-btn,
+  .retry-btn,
+  #resultScreen button,
+  .result-card button {
+    width: 100%;
+    min-height: 58px;
+    padding: 16px 20px;
+    font-size: 21px;
+    border-radius: 12px;
+    margin-top: 10px;
+  }
+
+  .diff-btn {
+    padding: 14px 0;
+    font-size: 16px;
+  }
+}
+
+/* =========================================
+   スマホ横向き（高さが低い画面）で上下が切れないように調整
+   ========================================= */
+@media (max-height: 550px) and (orientation: landscape) {
+  body {
+    padding: 6px 12px;
+    overflow: hidden;
+  }
+
+  .title {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  canvas {
+    width: auto;
+    max-width: 100%;
+    max-height: calc(100dvh - 102px);
+  }
+
+  .touch-controls {
+    margin-top: 6px;
+    gap: 12px;
+  }
+
+  .touch-btn {
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .auth-card,
+  #resultScreen,
+  .result-card {
+    max-width: 460px;
+    padding: 16px 20px;
+    max-height: 92dvh;
+    overflow-y: auto;
+  }
 }
