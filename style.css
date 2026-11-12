@@ -150,7 +150,6 @@ canvas {
   touch-action: manipulation;
 }
 
-/* スマホ・タブレットなどタッチ端末かつゲーム開始後のみ表示 */
 @media (hover: none) and (pointer: coarse) {
   .touch-controls.is-visible {
     display: flex;
@@ -179,7 +178,7 @@ canvas {
 }
 
 /* =========================================
-   スマホ向け：余計な上の表示を消してゲーム画面を最大化
+   スマホ縦向き：上のタイトルを消して画面を最大化
    ========================================= */
 @media (max-width: 900px), (hover: none) and (pointer: coarse) {
   body {
@@ -187,22 +186,20 @@ canvas {
     overflow: hidden;
   }
 
-  /* スマホ時は上の「DROP CRASH」タイトルを消してゲーム領域を広くする */
   .title {
     display: none;
   }
 
-  /* ゲーム開始前はログインカードが大きく見やすく出るようにする */
   .auth-card {
     width: 94vw;
     max-width: 440px;
-    padding: 28px 20px;
+    padding: 24px 18px;
     font-size: 18px;
   }
 
   .auth-card h2 {
-    font-size: 24px;
-    margin-bottom: 18px;
+    font-size: 22px;
+    margin-bottom: 16px;
   }
 
   input {
@@ -217,13 +214,12 @@ canvas {
   }
 
   .start-btn {
-    min-height: 58px;
-    font-size: 22px;
-    padding: 16px;
+    min-height: 56px;
+    font-size: 20px;
+    padding: 14px;
     border-radius: 12px;
   }
 
-  /* ゲーム画面を画面いっぱいに拡大 */
   canvas {
     width: 98vw;
     max-width: 98vw;
@@ -244,11 +240,12 @@ canvas {
 }
 
 /* =========================================
-   スマホ横向き（高さが低い画面）専用最適化
+   スマホ横向き：ゲーム画面を上下いっぱいに拡大し、
+   ◀ ▶ ボタンを左右両端に配置して親指操作しやすくする
    ========================================= */
 @media (max-height: 550px) and (orientation: landscape) {
   body {
-    padding: 2px 6px;
+    padding: 0;
     overflow: hidden;
   }
 
@@ -256,23 +253,44 @@ canvas {
     display: none;
   }
 
-  canvas {
-    width: auto;
-    max-width: 98vw;
-    height: calc(100dvh - 64px);
-    max-height: calc(100dvh - 64px);
+  #gameContainer {
+    max-width: 100vw;
+    height: 100dvh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
+  /* ゲーム画面を画面の上下いっぱいに大きく表示 */
+  canvas {
+    width: auto;
+    height: 98dvh;
+    max-height: 98dvh;
+    max-width: calc(100vw - 170px);
+    margin: 0 auto;
+  }
+
+  /* 操作ボタンを左右の両端に配置 */
   .touch-controls {
-    width: 98vw;
-    margin-top: 4px;
-    gap: 10px;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    margin: 0;
+    padding: 8px;
+    pointer-events: none;
+    justify-content: space-between;
+    align-items: stretch;
   }
 
   .touch-btn {
-    height: 52px;
-    font-size: 24px;
-    border-radius: 10px;
+    pointer-events: auto;
+    flex: 0 0 74px;
+    height: 100%;
+    font-size: 30px;
+    border-radius: 12px;
+    background-color: rgba(43, 43, 54, 0.85);
   }
 
   .auth-card {
