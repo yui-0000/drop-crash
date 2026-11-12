@@ -129,7 +129,14 @@ body {
 .menu-buttons {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+}
+
+.guide-hint {
+    font-size: 14px;
+    font-weight: bold;
+    color: #fffa65;
+    margin-top: 8px;
 }
 
 #startBtn {
@@ -158,7 +165,7 @@ body {
 .back-btn {
     width: 100%;
     padding: 12px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
     background-color: #4b6584;
     color: #ffffff;
@@ -274,8 +281,62 @@ body {
     line-height: 1.35;
 }
 
-/* PC画面（横幅768px以上）でのアイテム説明調整：2列グリッドでスクロールなしに収める */
+/* PC画面（横幅768px以上）での拡大調整 */
 @media (min-width: 768px) {
+    /* スタート画面を大きく見やすく */
+    #authScreen {
+        max-width: 560px;
+        padding: 40px 44px;
+    }
+
+    #authScreen h1 {
+        font-size: 46px;
+        margin-bottom: 28px;
+    }
+
+    .input-group {
+        margin-bottom: 24px;
+    }
+
+    .input-group input {
+        padding: 16px 18px;
+        font-size: 19px;
+    }
+
+    .difficulty-select {
+        margin-bottom: 28px;
+    }
+
+    .select-label {
+        font-size: 17px;
+        margin-bottom: 12px;
+    }
+
+    .diff-buttons {
+        gap: 12px;
+    }
+
+    .diff-btn {
+        padding: 14px 0;
+        font-size: 17px;
+    }
+
+    #startBtn {
+        padding: 18px;
+        font-size: 22px;
+    }
+
+    .guide-hint {
+        font-size: 16px;
+        margin-top: 12px;
+    }
+
+    .sub-btn {
+        padding: 15px;
+        font-size: 18px;
+    }
+
+    /* アイテム説明画面 */
     #guideScreen {
         max-width: 760px;
         padding: 32px 36px;
