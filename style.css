@@ -178,7 +178,7 @@ canvas {
 }
 
 /* =========================================
-   スマホ縦向き：上のタイトルを消して画面を最大化
+   スマホ縦向き：ゲーム画面とボタンの間を 100px 空ける
    ========================================= */
 @media (max-width: 900px), (hover: none) and (pointer: coarse) {
   body {
@@ -223,14 +223,14 @@ canvas {
   canvas {
     width: 98vw;
     max-width: 98vw;
-    max-height: calc(100dvh - 96px);
+    max-height: calc(100dvh - 190px);
     border-width: 1px;
   }
 
   .touch-controls {
     width: 98vw;
     max-width: 98vw;
-    margin-top: 6px;
+    margin-top: 100px;
   }
 
   .touch-btn {
@@ -261,7 +261,6 @@ canvas {
     align-items: center;
   }
 
-  /* ゲーム画面を画面の上下いっぱいに大きく表示 */
   canvas {
     width: auto;
     height: 98dvh;
@@ -270,7 +269,6 @@ canvas {
     margin: 0 auto;
   }
 
-  /* 操作ボタンを左右の両端に配置 */
   .touch-controls {
     position: fixed;
     inset: 0;
