@@ -269,6 +269,58 @@ body {
     line-height: 1.35;
 }
 
+/* PC画面（横幅768px以上）でのアイテム説明拡大調整 */
+@media (min-width: 768px) {
+    #guideScreen {
+        max-width: 680px;
+        padding: 34px 40px;
+    }
+
+    #guideScreen h2 {
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+
+    .guide-note {
+        font-size: 16px;
+        margin-bottom: 20px;
+    }
+
+    .guide-list {
+        gap: 12px;
+    }
+
+    .guide-row {
+        padding: 14px 18px;
+        gap: 16px;
+    }
+
+    .guide-row img {
+        width: 52px;
+        height: 52px;
+    }
+
+    .item-name {
+        font-size: 19px;
+    }
+
+    .item-badge {
+        font-size: 15px;
+        padding: 4px 12px;
+    }
+
+    .item-desc {
+        font-size: 15px;
+        line-height: 1.5;
+    }
+
+    .back-btn {
+        margin-top: 22px;
+        padding: 14px;
+        font-size: 18px;
+    }
+}
+
 /* ゲーム画面（Canvas） */
 #gameCanvas {
     background-color: #0f151a;
