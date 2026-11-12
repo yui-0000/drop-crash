@@ -177,7 +177,7 @@ body {
     margin-top: 16px;
 }
 
-/* アイテム説明リスト（スマホでも1列で大きく見やすいレイアウト） */
+/* アイテム説明リスト */
 .guide-list {
     display: flex;
     flex-direction: column;
@@ -289,7 +289,7 @@ body {
 
 @media (hover: none) and (pointer: coarse), (max-width: 900px) {
     #gameCanvas {
-        max-height: calc(100dvh - 115px);
+        max-height: calc(100dvh - 130px);
     }
 
     .touch-controls.is-visible {
@@ -297,34 +297,47 @@ body {
         justify-content: space-between;
         align-items: center;
         position: fixed;
-        bottom: 10px;
-        left: 16px;
-        right: 16px;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 150px;
+        padding: 0 20px 12px;
         z-index: 20;
-        pointer-events: none;
+        touch-action: none;
     }
 
     .touch-btn {
-        pointer-events: auto;
-        width: 100px;
-        height: 100px;
+        position: relative;
+        width: 115px;
+        height: 115px;
         border-radius: 50%;
-        border: 3px solid rgba(255, 255, 255, 0.7);
-        background-color: rgba(47, 54, 64, 0.8);
+        border: 3px solid rgba(255, 255, 255, 0.75);
+        background-color: rgba(47, 54, 64, 0.85);
         color: #ffffff;
-        font-size: 36px;
+        font-size: 40px;
         font-weight: bold;
         display: flex;
         justify-content: center;
         align-items: center;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.55);
         touch-action: none;
     }
 
+    /* ボタンの周囲25pxまで透明な当たり判定を拡張 */
+    .touch-btn::before {
+        content: '';
+        position: absolute;
+        top: -25px;
+        bottom: -25px;
+        left: -25px;
+        right: -25px;
+        border-radius: 50%;
+    }
+
     .touch-btn.active {
-        background-color: rgba(255, 250, 101, 0.85);
+        background-color: rgba(255, 250, 101, 0.9);
         color: #1e272e;
-        transform: scale(0.94);
+        transform: scale(0.95);
     }
 }
 
@@ -351,12 +364,13 @@ body {
     }
 
     .touch-controls.is-visible {
-        bottom: 8px;
+        height: 120px;
+        padding: 0 18px 8px;
     }
 
     .touch-btn {
-        width: 82px;
-        height: 82px;
-        font-size: 30px;
+        width: 96px;
+        height: 96px;
+        font-size: 34px;
     }
 }

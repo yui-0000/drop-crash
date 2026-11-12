@@ -175,41 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'ArrowRight') keys.right = false;
     });
 
-    // スマホ・タブレット専用 左右タッチボタン操作
-    function bindTouchButton(button, direction) {
-        if (!button) return;
-
-        const press = (e) => {
-            e.preventDefault();
-            keys[direction] = true;
-            button.classList.add('active');
-        };
-
-        const release = (e) => {
-            e.preventDefault();
-            keys[direction] = false;
-            button.classList.remove('active');
-        };
-
-        button.addEventListener('touchstart', press, { passive: false });
-        button.addEventListener('touchend', release, { passive: false });
-        button.addEventListener('touchcancel', release, { passive: false });
-    }
-
-    bindTouchButton(btnLeft, 'left');
-    bindTouchButton(btnRight, 'right');
-
-    // スマホ・タブレット専用：ゲーム画面（Canvas）の左半分・右半分を直接タップして左右移動
-    function updateCanvasTouchDirection(e) {
+    // スマホ・タブレット専用：画面上のどの位置に指があっても（滑らせても）左右判定を維持する
+    function updateScreenTouchDirection(e) {
         if (isGameOver) return;
+        if (canvas.style.display === 'none') return;
         e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
+
+        const screenHalfX = window.innerWidth / 2;
         let touchLeft = false;
         let touchRight = false;
 
         for (let i = 0; i < e.touches.length; i++) {
-            const touchX = e.touches[i].clientX - rect.left;
-            if (touchX < rect.width / 2) {
+            const x = e.touches[i].clientX;
+            if (x < screenHalfX) {
                 touchLeft = true;
             } else {
                 touchRight = true;
@@ -222,33 +200,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnRight) btnRight.classList.toggle('active', touchRight);
     }
 
-    canvas.addEventListener('touchstart', (e) => {
-        if (isGameOver) return;
-        updateCanvasTouchDirection(e);
-    }, { passive: false });
-
-    canvas.addEventListener('touchmove', (e) => {
-        if (isGameOver) return;
-        updateCanvasTouchDirection(e);
-    }, { passive: false });
-
-    canvas.addEventListener('touchend', (e) => {
-        if (isGameOver) return;
-        if (e.touches.length === 0) {
+    // 操作ボタンエリア＆ゲーム画面の両方で指のタッチ・スライドを追跡
+    [touchControls, canvas].forEach(el => {
+        if (!el) return;
+        el.addEventListener('touchstart', updateScreenTouchDirection, { passive: false });
+        el.addEventListener('touchmove', updateScreenTouchDirection, { passive: false });
+        el.addEventListener('touchend', (e) => {
+            if (isGameOver) return;
+            if (e.touches.length === 0) {
+                keys.left = false;
+                keys.right = false;
+                if (btnLeft) btnLeft.classList.remove('active');
+                if (btnRight) btnRight.classList.remove('active');
+            } else {
+                updateScreenTouchDirection(e);
+            }
+        }, { passive: false });
+        el.addEventListener('touchcancel', () => {
             keys.left = false;
             keys.right = false;
             if (btnLeft) btnLeft.classList.remove('active');
             if (btnRight) btnRight.classList.remove('active');
-        } else {
-            updateCanvasTouchDirection(e);
-        }
-    }, { passive: false });
-
-    canvas.addEventListener('touchcancel', () => {
-        keys.left = false;
-        keys.right = false;
-        if (btnLeft) btnLeft.classList.remove('active');
-        if (btnRight) btnRight.classList.remove('active');
+        });
     });
 
     // キャンバスクリック判定（ゲームオーバー画面のボタン用）
