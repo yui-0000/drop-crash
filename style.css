@@ -364,13 +364,20 @@ body {
     }
 
     .touch-controls.is-visible {
-        height: 120px;
-        padding: 0 18px 8px;
+        height: 165px;
+        padding: 0 24px 12px;
     }
 
     .touch-btn {
-        width: 96px;
-        height: 96px;
-        font-size: 34px;
+        width: 130px;
+        height: 130px;
+        font-size: 46px;
+    }
+
+    .touch-btn::before {
+        top: -30px;
+        bottom: -30px;
+        left: -30px;
+        right: -30px;
     }
 }
