@@ -1,47 +1,123 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>DROP CRASH</title>
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>DROP CRASH</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="gameContainer">
-    <h1 class="title">DROP CRASH</h1>
+    <!-- スタート画面 -->
+    <div id="authScreen">
+        <h1>DROP CRASH</h1>
 
-    <!-- プレイヤー設定画面 -->
-    <div id="authScreen" class="auth-card">
-      <h2>プレイヤー設定</h2>
-      <div class="input-group">
-        <input type="text" id="username" placeholder="ニックネーム（空欄でもOK）" maxlength="12" />
-      </div>
-      <!-- ピンコードは今回非表示（コメントアウト）
-      <div class="input-group">
-        <input type="password" id="pincode" placeholder="4桁のピンコード" maxlength="4" inputmode="numeric" />
-      </div>
-      -->
+        <div class="input-group">
+            <input type="text" id="username" placeholder="ユーザー名（空欄ならGUEST）" maxlength="12">
+            <!-- ピンコードは今回未使用のためコメントアウト
+            <input type="password" id="pincode" placeholder="4桁のピンコード" maxlength="4" inputmode="numeric">
+            -->
+        </div>
 
-      <label class="diff-label">難易度を選択:</label>
-      <div class="difficulty-group">
-        <button type="button" class="diff-btn" data-diff="easy">EASY</button>
-        <button type="button" class="diff-btn active" data-diff="normal">NORMAL</button>
-        <button type="button" class="diff-btn" data-diff="hard">HARD</button>
-      </div>
+        <div class="difficulty-select">
+            <p class="select-label">難易度を選択:</p>
+            <div class="diff-buttons">
+                <button type="button" class="diff-btn" data-diff="easy">EASY</button>
+                <button type="button" class="diff-btn active" data-diff="normal">NORMAL</button>
+                <button type="button" class="diff-btn" data-diff="hard">HARD</button>
+            </div>
+        </div>
 
-      <button type="button" id="startBtn" class="start-btn">ゲームスタート</button>
+        <div class="menu-buttons">
+            <button type="button" id="startBtn">ゲームスタート</button>
+            <button type="button" id="openGuideBtn" class="sub-btn">アイテム説明</button>
+        </div>
     </div>
 
-    <!-- ゲームキャンバス -->
-    <canvas id="gameCanvas" width="1000" height="700"></canvas>
+    <!-- アイテム説明画面（「アイテム説明」ボタンを押したときだけ表示） -->
+    <div id="guideScreen" style="display: none;">
+        <h2>アイテム説明</h2>
+        <p class="guide-note">フルーツを連続キャッチでコンボ発生（最大5倍）！</p>
+
+        <div class="guide-list">
+            <div class="guide-row plus">
+                <img src="images/apple.png" alt="りんご">
+                <div class="guide-info">
+                    <div class="guide-header">
+                        <span class="item-name">りんご</span>
+                        <span class="item-badge plus">+5点</span>
+                    </div>
+                    <p class="item-desc">高得点のフルーツ。連続で取ると得点アップ！</p>
+                </div>
+            </div>
+
+            <div class="guide-row plus">
+                <img src="images/strawberry.png" alt="いちご">
+                <div class="guide-info">
+                    <div class="guide-header">
+                        <span class="item-name">いちご</span>
+                        <span class="item-badge plus">+3点</span>
+                    </div>
+                    <p class="item-desc">基本のフルーツ。コンボをつないで稼ごう！</p>
+                </div>
+            </div>
+
+            <div class="guide-row special">
+                <img src="images/star.png" alt="スター">
+                <div class="guide-info">
+                    <div class="guide-header">
+                        <span class="item-name">スター</span>
+                        <span class="item-badge special">フィーバー突入！</span>
+                    </div>
+                    <p class="item-desc">移動スピードUP＆アイテムが大量に降ってくる！</p>
+                </div>
+            </div>
+
+            <div class="guide-row special">
+                <img src="images/item_clock.png" alt="時計">
+                <div class="guide-info">
+                    <div class="guide-header">
+                        <span class="item-name">時計</span>
+                        <span class="item-badge special">残り時間 +5秒</span>
+                    </div>
+                    <p class="item-desc">制限時間が5秒延長されるレアアイテム。</p>
+                </div>
+            </div>
+
+            <div class="guide-row danger">
+                <img src="images/chestnut.png" alt="いがぐり" class="chestnut-icon">
+                <div class="guide-info">
+                    <div class="guide-header">
+                        <span class="item-name">いがぐり</span>
+                        <span class="item-badge danger">-1点 / 3秒しびれ</span>
+                    </div>
+                    <p class="item-desc">当たるとコンボが途切れ、3秒間動けなくなる。</p>
+                </div>
+            </div>
+
+            <div class="guide-row danger">
+                <img src="images/bomb.png" alt="爆弾">
+                <div class="guide-info">
+                    <div class="guide-header">
+                        <span class="item-name">爆弾</span>
+                        <span class="item-badge danger">-5点 / 5秒しびれ</span>
+                    </div>
+                    <p class="item-desc">大ダメージ＆5秒間動けなくなる危険物！</p>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" id="closeGuideBtn" class="back-btn">スタート画面に戻る</button>
+    </div>
+
+    <!-- ゲーム画面 -->
+    <canvas id="gameCanvas" width="800" height="600" style="display: none;"></canvas>
 
     <!-- スマホ・タブレット専用 左右タッチ操作ボタン -->
     <div id="touchControls" class="touch-controls">
-      <button type="button" id="btnLeft" class="touch-btn" aria-label="左へ移動">◀</button>
-      <button type="button" id="btnRight" class="touch-btn" aria-label="右へ移動">▶</button>
+        <button type="button" id="btnLeft" class="touch-btn" aria-label="左へ移動">◀</button>
+        <button type="button" id="btnRight" class="touch-btn" aria-label="右へ移動">▶</button>
     </div>
-  </div>
 
-  <script src="script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

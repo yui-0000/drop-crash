@@ -3,10 +3,28 @@ document.addEventListener('DOMContentLoaded', () => {
     const ctx = canvas.getContext('2d');
 
     const authScreen = document.getElementById('authScreen');
+    const guideScreen = document.getElementById('guideScreen');
+    const openGuideBtn = document.getElementById('openGuideBtn');
+    const closeGuideBtn = document.getElementById('closeGuideBtn');
     const startBtn = document.getElementById('startBtn');
     const usernameInput = document.getElementById('username');
     // const pincodeInput = document.getElementById('pincode'); // 今回未使用
     const diffButtons = document.querySelectorAll('.diff-btn');
+
+    // 「アイテム説明」画面の切り替え処理
+    if (openGuideBtn && guideScreen) {
+        openGuideBtn.addEventListener('click', () => {
+            authScreen.style.display = 'none';
+            guideScreen.style.display = 'block';
+        });
+    }
+
+    if (closeGuideBtn && guideScreen) {
+        closeGuideBtn.addEventListener('click', () => {
+            guideScreen.style.display = 'none';
+            authScreen.style.display = 'block';
+        });
+    }
 
     // タッチ操作用UI（スマホ・タブレット専用）
     const touchControls = document.getElementById('touchControls');
@@ -90,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let score = 0;
-    let timeLeft = 30;
+    let timeLeft = 50;
     let isGameOver = false;
     let isNewRecord = false;
     let spawnTimer = null;
@@ -99,7 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 時計の出現数制限
     let clockSpawnedCount = 0;
-    const maxClockCount = 3;
+    let maxClockCount = 3;
 
     // 状態タイマー
     let stunTimer = 0;
@@ -293,6 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             currentUsername = username;
             authScreen.style.display = 'none';
+            if (guideScreen) guideScreen.style.display = 'none';
             canvas.style.display = 'block';
             if (touchControls) touchControls.classList.add('is-visible');
 
@@ -302,7 +321,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetAndStartGame() {
         score = 0;
-        timeLeft = 30;
         combo = 0;
         clockSpawnedCount = 0;
         stunTimer = 0;
@@ -318,10 +336,20 @@ document.addEventListener('DOMContentLoaded', () => {
         items.length = 0;
         isGameOver = false;
 
-        // 難易度に応じたフィーバー時間
-        if (selectedDifficulty === 'easy') feverMaxDuration = 7;
-        else if (selectedDifficulty === 'normal') feverMaxDuration = 5;
-        else if (selectedDifficulty === 'hard') feverMaxDuration = 4;
+        // 難易度に応じた制限時間・時計出現上限・フィーバー時間
+        if (selectedDifficulty === 'easy') {
+            timeLeft = 45;
+            maxClockCount = 3;
+            feverMaxDuration = 7;
+        } else if (selectedDifficulty === 'normal') {
+            timeLeft = 50;
+            maxClockCount = 3;
+            feverMaxDuration = 5;
+        } else {
+            timeLeft = 60;
+            maxClockCount = 4;
+            feverMaxDuration = 4;
+        }
 
         if (spawnTimer) clearInterval(spawnTimer);
         if (countTimer) clearInterval(countTimer);
@@ -395,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 speed = baseSpeed + 4.5 + speedBonus;
             } else if (rand < 0.12 && clockSpawnedCount < maxClockCount) {
                 type = 'clock';
-                speed = baseSpeed + 3.5 + speedBonus;
+                speed = baseSpeed + 1.5 + speedBonus;
                 clockSpawnedCount++;
             } else if (rand < 0.25) {
                 type = 'bomb';
