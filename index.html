@@ -1,46 +1,47 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>DROP CRASH</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DROP CRASH</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="gameContainer">
-        <h1 class="title">DROP CRASH</h1>
+  <div id="gameContainer">
+    <h1 class="title">DROP CRASH</h1>
 
-        <!-- ログイン＆難易度選択画面 -->
-        <div id="authScreen" class="auth-card">
-            <h2>プレイヤー登録 / ログイン</h2>
-            <div class="input-group">
-                <input type="text" id="username" placeholder="ユーザー名">
-            </div>
-            <div class="input-group">
-                <input type="password" id="pincode" placeholder="4桁のピンコード" maxlength="4" inputmode="numeric">
-            </div>
+    <!-- プレイヤー設定画面 -->
+    <div id="authScreen" class="auth-card">
+      <h2>プレイヤー設定</h2>
+      <div class="input-group">
+        <input type="text" id="username" placeholder="ニックネーム（空欄でもOK）" maxlength="12" />
+      </div>
+      <!-- ピンコードは今回非表示（コメントアウト）
+      <div class="input-group">
+        <input type="password" id="pincode" placeholder="4桁のピンコード" maxlength="4" inputmode="numeric" />
+      </div>
+      -->
 
-            <!-- 難易度選択 -->
-            <label class="diff-label">難易度を選択:</label>
-            <div class="difficulty-group">
-                <button type="button" class="diff-btn" data-diff="easy">EASY</button>
-                <button type="button" class="diff-btn active" data-diff="normal">NORMAL</button>
-                <button type="button" class="diff-btn" data-diff="hard">HARD</button>
-            </div>
+      <label class="diff-label">難易度を選択:</label>
+      <div class="difficulty-group">
+        <button type="button" class="diff-btn" data-diff="easy">EASY</button>
+        <button type="button" class="diff-btn active" data-diff="normal">NORMAL</button>
+        <button type="button" class="diff-btn" data-diff="hard">HARD</button>
+      </div>
 
-            <button type="button" id="startBtn" class="start-btn">ゲームスタート</button>
-        </div>
-
-        <!-- ゲーム画面 -->
-        <canvas id="gameCanvas" width="1000" height="700"></canvas>
-
-        <!-- スマホ・タブレット用タッチ操作ボタン -->
-        <div id="touchControls" class="touch-controls">
-            <button type="button" id="btnLeft" class="touch-btn" aria-label="左へ移動">◀</button>
-            <button type="button" id="btnRight" class="touch-btn" aria-label="右へ移動">▶</button>
-        </div>
+      <button type="button" id="startBtn" class="start-btn">ゲームスタート</button>
     </div>
 
-    <script src="script.js"></script>
+    <!-- ゲームキャンバス -->
+    <canvas id="gameCanvas" width="1000" height="700"></canvas>
+
+    <!-- スマホ・タブレット専用 左右タッチ操作ボタン -->
+    <div id="touchControls" class="touch-controls">
+      <button type="button" id="btnLeft" class="touch-btn" aria-label="左へ移動">◀</button>
+      <button type="button" id="btnRight" class="touch-btn" aria-label="右へ移動">▶</button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 </html>

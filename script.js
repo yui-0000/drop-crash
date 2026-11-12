@@ -5,13 +5,38 @@ document.addEventListener('DOMContentLoaded', () => {
     const authScreen = document.getElementById('authScreen');
     const startBtn = document.getElementById('startBtn');
     const usernameInput = document.getElementById('username');
-    const pincodeInput = document.getElementById('pincode');
+    // const pincodeInput = document.getElementById('pincode'); // 今回未使用
     const diffButtons = document.querySelectorAll('.diff-btn');
 
     // タッチ操作用UI（スマホ・タブレット専用）
     const touchControls = document.getElementById('touchControls');
     const btnLeft = document.getElementById('btnLeft');
     const btnRight = document.getElementById('btnRight');
+
+    // 端末保存用キー（localStorage）
+    const STORAGE_NAME_KEY = 'dropCrash_username';
+    const STORAGE_BEST_KEY = 'dropCrash_bestScores';
+
+    // 保存済みの名前があれば自動入力
+    const savedName = localStorage.getItem(STORAGE_NAME_KEY);
+    if (savedName && usernameInput) {
+        usernameInput.value = savedName;
+    }
+
+    // 難易度別ハイスコアの読み込み
+    let bestScores = { easy: 0, normal: 0, hard: 0 };
+    try {
+        const savedBest = JSON.parse(localStorage.getItem(STORAGE_BEST_KEY));
+        if (savedBest && typeof savedBest === 'object') {
+            bestScores = {
+                easy: Number(savedBest.easy) || 0,
+                normal: Number(savedBest.normal) || 0,
+                hard: Number(savedBest.hard) || 0
+            };
+        }
+    } catch (e) {
+        // 読み込み失敗時は初期値0のまま
+    }
 
     // 選択された難易度（デフォルト：normal）
     let selectedDifficulty = 'normal';
@@ -67,6 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let score = 0;
     let timeLeft = 30;
     let isGameOver = false;
+    let isNewRecord = false;
     let spawnTimer = null;
     let countTimer = null;
     let currentUsername = '';
@@ -86,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const items = [];
     const keys = { left: false, right: false };
 
-    // スマホ・タッチ端末判定（横向きで画面幅が広くても確実にスマホ判定する）
+    // スマホ・タッチ端末判定（横向きでも確実にスマホ判定する）
     function isMobileDevice() {
         return (
             'ontouchstart' in window ||
@@ -99,20 +125,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- ゲームオーバー画面用 ボタン配置データ（PC/スマホ自動切り替え） ---
     function getGameOverButtons() {
         if (isMobileDevice()) {
-            // スマホ専用：指で押しやすい特大サイズ
             return {
-                retry: { x: canvas.width / 2 - 210, y: canvas.height / 2 + 25, width: 420, height: 92, label: 'もう一度遊ぶ' },
-                easy: { x: canvas.width / 2 - 295, y: canvas.height / 2 + 145, width: 180, height: 72, diff: 'easy', label: 'EASY' },
-                normal: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 145, width: 180, height: 72, diff: 'normal', label: 'NORMAL' },
-                hard: { x: canvas.width / 2 + 115, y: canvas.height / 2 + 145, width: 180, height: 72, diff: 'hard', label: 'HARD' }
+                retry: { x: canvas.width / 2 - 210, y: canvas.height / 2 + 55, width: 420, height: 92, label: 'もう一度遊ぶ' },
+                easy: { x: canvas.width / 2 - 295, y: canvas.height / 2 + 175, width: 180, height: 72, diff: 'easy', label: 'EASY' },
+                normal: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 175, width: 180, height: 72, diff: 'normal', label: 'NORMAL' },
+                hard: { x: canvas.width / 2 + 115, y: canvas.height / 2 + 175, width: 180, height: 72, diff: 'hard', label: 'HARD' }
             };
         }
-        // パソコン用：従来のサイズ
         return {
-            retry: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 50, width: 180, height: 42, label: 'もう一度遊ぶ' },
-            easy: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'easy', label: 'EASY' },
-            normal: { x: canvas.width / 2 - 45, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'normal', label: 'NORMAL' },
-            hard: { x: canvas.width / 2 + 55, y: canvas.height / 2 + 110, width: 90, height: 35, diff: 'hard', label: 'HARD' }
+            retry: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 70, width: 180, height: 42, label: 'もう一度遊ぶ' },
+            easy: { x: canvas.width / 2 - 145, y: canvas.height / 2 + 130, width: 90, height: 35, diff: 'easy', label: 'EASY' },
+            normal: { x: canvas.width / 2 - 45, y: canvas.height / 2 + 130, width: 90, height: 35, diff: 'normal', label: 'NORMAL' },
+            hard: { x: canvas.width / 2 + 55, y: canvas.height / 2 + 130, width: 90, height: 35, diff: 'hard', label: 'HARD' }
         };
     }
 
@@ -133,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'ArrowRight') keys.right = false;
     });
 
-    // スマホ・タブレット専用 左右タッチボタン操作（マウス操作は無効）
+    // スマホ・タブレット専用 左右タッチボタン操作
     function bindTouchButton(button, direction) {
         if (!button) return;
 
@@ -209,7 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnRight) btnRight.classList.remove('active');
     });
 
-    // キャンバスクリック判定（ゲームオーバー画面のボタン用・スマホ縮小表示の座標補正付き）
+    // キャンバスクリック判定（ゲームオーバー画面のボタン用）
     canvas.addEventListener('click', (e) => {
         if (!isGameOver) return;
 
@@ -233,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // 「もう一度遊ぶ」ボタン判定（選択中の難易度ですぐにスタート）
+        // 「もう一度遊ぶ」ボタン判定
         const retry = buttons.retry;
         if (
             clickX >= retry.x && clickX <= retry.x + retry.width &&
@@ -243,12 +267,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // スタートボタン処理
+    // スタートボタン処理（ニックネームを端末に記憶・ピンコードはコメントアウト）
     if (startBtn) {
         startBtn.onclick = function () {
-            const username = usernameInput.value.trim();
-            const pincode = pincodeInput.value.trim();
+            const rawName = usernameInput.value.trim();
+            const username = rawName || 'GUEST';
 
+            if (rawName) {
+                localStorage.setItem(STORAGE_NAME_KEY, rawName);
+            } else {
+                localStorage.removeItem(STORAGE_NAME_KEY);
+            }
+
+            /* ピンコード入力チェック（今回未使用のためコメントアウト）
+            const pincode = pincodeInput.value.trim();
             if (!username || !pincode) {
                 alert('ユーザー名と4桁のピンコードを入力してください！');
                 return;
@@ -257,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('ピンコードは半角の4桁の数字で入力してください！');
                 return;
             }
+            */
 
             currentUsername = username;
             authScreen.style.display = 'none';
@@ -274,6 +307,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clockSpawnedCount = 0;
         stunTimer = 0;
         feverTimer = 0;
+        isNewRecord = false;
         keys.left = false;
         keys.right = false;
         if (btnLeft) btnLeft.classList.remove('active');
@@ -440,6 +474,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnRight) btnRight.classList.remove('active');
         clearInterval(spawnTimer);
         clearInterval(countTimer);
+
+        // 難易度別の自己ベスト更新チェック＆端末保存
+        const prevBest = bestScores[selectedDifficulty] || 0;
+        if (score > prevBest) {
+            bestScores[selectedDifficulty] = score;
+            isNewRecord = true;
+            try {
+                localStorage.setItem(STORAGE_BEST_KEY, JSON.stringify(bestScores));
+            } catch (e) {
+                // 保存エラー時は無視
+            }
+        }
     }
 
     function draw() {
@@ -478,25 +524,32 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // UI表示
+        // UI表示（左上にプレイヤー名・スコア・選択中の難易度のBESTスコア）
+        const currentBest = Math.max(score, bestScores[selectedDifficulty] || 0);
         ctx.fillStyle = '#ffffff';
         ctx.font = '22px sans-serif';
         ctx.fillText(`PLAYER: ${currentUsername} [${selectedDifficulty.toUpperCase()}]`, 25, 35);
         ctx.fillText(`SCORE: ${score}`, 25, 65);
 
+        ctx.fillStyle = '#fffa65';
+        ctx.font = 'bold 20px sans-serif';
+        ctx.fillText(`BEST (${selectedDifficulty.toUpperCase()}): ${currentBest}`, 25, 95);
+
         if (combo >= 2) {
             ctx.fillStyle = '#70a1ff';
             ctx.font = 'bold 24px sans-serif';
-            ctx.fillText(`COMBO x${combo}!`, 25, 95);
+            ctx.fillText(`COMBO x${combo}!`, 25, 125);
         }
 
         ctx.fillStyle = timeLeft <= 5 ? '#ff4757' : '#ffffff';
+        ctx.font = '22px sans-serif';
         ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 130, 35);
 
-        // GAME OVER 表示（スマホのときだけ文字もボタンも大きく表示）
+        // GAME OVER 表示
         if (isGameOver) {
             const mobile = isMobileDevice();
             const buttons = getGameOverButtons();
+            const diffBest = bestScores[selectedDifficulty] || 0;
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -504,11 +557,22 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillStyle = '#ff4757';
             ctx.font = mobile ? 'bold 84px sans-serif' : 'bold 50px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 110 : canvas.height / 2 - 50);
+            ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 135 : canvas.height / 2 - 75);
+
+            // 新記録のときは金色で「NEW RECORD!」を表示
+            if (isNewRecord && score > 0) {
+                ctx.fillStyle = '#fffa65';
+                ctx.font = mobile ? 'bold 38px sans-serif' : 'bold 22px sans-serif';
+                ctx.fillText('★ NEW RECORD! ★', canvas.width / 2, mobile ? canvas.height / 2 - 75 : canvas.height / 2 - 35);
+            }
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = mobile ? 'bold 42px sans-serif' : '24px sans-serif';
-            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, mobile ? canvas.height / 2 - 30 : canvas.height / 2);
+            ctx.font = mobile ? 'bold 40px sans-serif' : '24px sans-serif';
+            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, mobile ? canvas.height / 2 - 25 : canvas.height / 2);
+
+            ctx.fillStyle = '#7bed9f';
+            ctx.font = mobile ? 'bold 32px sans-serif' : '18px sans-serif';
+            ctx.fillText(`${selectedDifficulty.toUpperCase()} 自己ベスト: ${diffBest}`, canvas.width / 2, mobile ? canvas.height / 2 + 22 : canvas.height / 2 + 32);
 
             // 1. 「もう一度遊ぶ」ボタン描画
             const retry = buttons.retry;
