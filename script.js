@@ -86,20 +86,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const items = [];
     const keys = { left: false, right: false };
 
-    // スマホ判定関数（スマホのときだけゲームオーバー表示を大きくする）
+    // スマホ・タッチ端末判定（横向きで画面幅が広くても確実にスマホ判定する）
     function isMobileDevice() {
-        return window.matchMedia('(hover: none) and (pointer: coarse)').matches || window.innerWidth <= 900;
+        return (
+            'ontouchstart' in window ||
+            navigator.maxTouchPoints > 0 ||
+            window.matchMedia('(hover: none) and (pointer: coarse)').matches ||
+            window.innerHeight <= 600
+        );
     }
 
     // --- ゲームオーバー画面用 ボタン配置データ（PC/スマホ自動切り替え） ---
     function getGameOverButtons() {
         if (isMobileDevice()) {
-            // スマホ専用：大きく押しやすいサイズ
+            // スマホ専用：指で押しやすい特大サイズ
             return {
-                retry: { x: canvas.width / 2 - 175, y: canvas.height / 2 + 45, width: 350, height: 76, label: 'もう一度遊ぶ' },
-                easy: { x: canvas.width / 2 - 245, y: canvas.height / 2 + 145, width: 150, height: 58, diff: 'easy', label: 'EASY' },
-                normal: { x: canvas.width / 2 - 75, y: canvas.height / 2 + 145, width: 150, height: 58, diff: 'normal', label: 'NORMAL' },
-                hard: { x: canvas.width / 2 + 95, y: canvas.height / 2 + 145, width: 150, height: 58, diff: 'hard', label: 'HARD' }
+                retry: { x: canvas.width / 2 - 210, y: canvas.height / 2 + 25, width: 420, height: 92, label: 'もう一度遊ぶ' },
+                easy: { x: canvas.width / 2 - 295, y: canvas.height / 2 + 145, width: 180, height: 72, diff: 'easy', label: 'EASY' },
+                normal: { x: canvas.width / 2 - 90, y: canvas.height / 2 + 145, width: 180, height: 72, diff: 'normal', label: 'NORMAL' },
+                hard: { x: canvas.width / 2 + 115, y: canvas.height / 2 + 145, width: 180, height: 72, diff: 'hard', label: 'HARD' }
             };
         }
         // パソコン用：従来のサイズ
@@ -497,28 +502,28 @@ document.addEventListener('DOMContentLoaded', () => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             ctx.fillStyle = '#ff4757';
-            ctx.font = mobile ? 'bold 76px sans-serif' : 'bold 50px sans-serif';
+            ctx.font = mobile ? 'bold 84px sans-serif' : 'bold 50px sans-serif';
             ctx.textAlign = 'center';
-            ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 80 : canvas.height / 2 - 50);
+            ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 110 : canvas.height / 2 - 50);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = mobile ? 'bold 38px sans-serif' : '24px sans-serif';
-            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, mobile ? canvas.height / 2 - 10 : canvas.height / 2);
+            ctx.font = mobile ? 'bold 42px sans-serif' : '24px sans-serif';
+            ctx.fillText(`${currentUsername} さんのスコア: ${score}`, canvas.width / 2, mobile ? canvas.height / 2 - 30 : canvas.height / 2);
 
             // 1. 「もう一度遊ぶ」ボタン描画
             const retry = buttons.retry;
             ctx.fillStyle = '#ff4757';
             ctx.beginPath();
             if (ctx.roundRect) {
-                ctx.roundRect(retry.x, retry.y, retry.width, retry.height, mobile ? 14 : 8);
+                ctx.roundRect(retry.x, retry.y, retry.width, retry.height, mobile ? 16 : 8);
             } else {
                 ctx.rect(retry.x, retry.y, retry.width, retry.height);
             }
             ctx.fill();
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = mobile ? 'bold 32px sans-serif' : 'bold 18px sans-serif';
-            ctx.fillText(retry.label, canvas.width / 2, retry.y + (mobile ? 49 : 27));
+            ctx.font = mobile ? 'bold 38px sans-serif' : 'bold 18px sans-serif';
+            ctx.fillText(retry.label, canvas.width / 2, retry.y + (mobile ? 59 : 27));
 
             // 2. 難易度切り替えボタン（EASY / NORMAL / HARD）描画
             ['easy', 'normal', 'hard'].forEach(diffKey => {
@@ -535,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 ctx.beginPath();
                 if (ctx.roundRect) {
-                    ctx.roundRect(btn.x, btn.y, btn.width, btn.height, mobile ? 10 : 6);
+                    ctx.roundRect(btn.x, btn.y, btn.width, btn.height, mobile ? 12 : 6);
                 } else {
                     ctx.rect(btn.x, btn.y, btn.width, btn.height);
                 }
@@ -543,13 +548,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (isSelected) {
                     ctx.strokeStyle = '#ffffff';
-                    ctx.lineWidth = mobile ? 3 : 2;
+                    ctx.lineWidth = mobile ? 4 : 2;
                     ctx.stroke();
                 }
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = mobile ? 'bold 24px sans-serif' : 'bold 14px sans-serif';
-                ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + (mobile ? 38 : 23));
+                ctx.font = mobile ? 'bold 30px sans-serif' : 'bold 14px sans-serif';
+                ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + (mobile ? 47 : 23));
             });
 
             ctx.textAlign = 'left';
