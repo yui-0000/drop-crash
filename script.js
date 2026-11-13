@@ -207,6 +207,25 @@ document.addEventListener('DOMContentLoaded', () => {
     phase: Math.random() * Math.PI * 2
   }));
 
+  // ランダムに生成・再配置される雲データ（5個）
+  function createRandomCloud(initialRandomX = false) {
+    const r = 18 + Math.random() * 18; // 大きさ（半径18〜36）
+    return {
+      x: initialRandomX ? Math.random() * (canvas.width + 200) - 100 : -r * 3.5,
+      baseY: (0.08 + Math.random() * 0.28) * canvas.height, // 高さ（画面上部8%〜36%）
+      r: r,
+      speed: 7 + Math.random() * 14, // 速度（ゆっくり〜やや速めまでランダム）
+      bobAmp: 2 + Math.random() * 5, // 上下ふわふわの揺れ幅
+      bobFreq: 0.6 + Math.random() * 1.0, // 揺れの周期
+      phase: Math.random() * Math.PI * 2,
+      puffStyle: Math.floor(Math.random() * 3), // 雲の形バリエーション（3種類）
+      alphaScale: 0.7 + Math.random() * 0.3 // 雲ごとの濃さの違い
+    };
+  }
+
+  const bgClouds = Array.from({ length: 5 }, () => createRandomCloud(true));
+  let lastCloudFrameTime = performance.now();
+
   // 滑らかなイージング関数（色の変化の始まりと終わりを自然にする）
   function easeInOut(t) {
     const clamped = Math.max(0, Math.min(1, t));
@@ -311,26 +330,43 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // ふわふわ流れるシンプルな雲（昼〜夕方に表示）
-    const cloudAlpha = Math.max(0, 0.85 * (1 - nightAlpha * 0.9));
-    if (cloudAlpha > 0.02) {
-      ctx.fillStyle = `rgba(255, 255, 255, ${cloudAlpha})`;
-      const tSec = performance.now() / 1000;
-      const clouds = [
-        { baseX: 0.15, y: 0.16, r: 28, speed: 12 },
-        { baseX: 0.55, y: 0.24, r: 22, speed: 9 },
-        { baseX: 0.85, y: 0.14, r: 30, speed: 14 }
-      ];
-      clouds.forEach(c => {
-        const cx = ((c.baseX * canvas.width + tSec * c.speed) % (canvas.width + 160)) - 80;
-        const cy = c.y * canvas.height;
+    // ランダムにふわふわ漂う雲（画面端まで行くと別の形・高さ・速度で再登場）
+    const nowMs = performance.now();
+    const dtSec = Math.min(0.1, (nowMs - lastCloudFrameTime) / 1000);
+    lastCloudFrameTime = nowMs;
+    const tSec = nowMs / 1000;
+
+    const cloudBaseAlpha = Math.max(0, 0.88 * (1 - nightAlpha * 0.92));
+    bgClouds.forEach((c, idx) => {
+      c.x += c.speed * dtSec;
+      if (c.x - c.r * 2 > canvas.width + 40) {
+        bgClouds[idx] = createRandomCloud(false);
+        return;
+      }
+
+      if (cloudBaseAlpha > 0.02) {
+        const cy = c.baseY + Math.sin(tSec * c.bobFreq + c.phase) * c.bobAmp;
+        ctx.fillStyle = `rgba(255, 255, 255, ${cloudBaseAlpha * c.alphaScale})`;
         ctx.beginPath();
-        ctx.arc(cx, cy, c.r, 0, Math.PI * 2);
-        ctx.arc(cx + c.r * 0.9, cy - c.r * 0.2, c.r * 0.8, 0, Math.PI * 2);
-        ctx.arc(cx + c.r * 1.7, cy, c.r * 0.75, 0, Math.PI * 2);
+        if (c.puffStyle === 0) {
+          // 標準の3コブ雲
+          ctx.arc(c.x, cy, c.r, 0, Math.PI * 2);
+          ctx.arc(c.x + c.r * 0.9, cy - c.r * 0.25, c.r * 0.85, 0, Math.PI * 2);
+          ctx.arc(c.x + c.r * 1.75, cy, c.r * 0.75, 0, Math.PI * 2);
+        } else if (c.puffStyle === 1) {
+          // 横長の4コブ雲
+          ctx.arc(c.x, cy + c.r * 0.1, c.r * 0.8, 0, Math.PI * 2);
+          ctx.arc(c.x + c.r * 0.8, cy - c.r * 0.2, c.r * 0.95, 0, Math.PI * 2);
+          ctx.arc(c.x + c.r * 1.7, cy - c.r * 0.15, c.r * 0.85, 0, Math.PI * 2);
+          ctx.arc(c.x + c.r * 2.45, cy + c.r * 0.1, c.r * 0.7, 0, Math.PI * 2);
+        } else {
+          // ぽってり2コブの小さな雲
+          ctx.arc(c.x, cy, c.r * 0.9, 0, Math.PI * 2);
+          ctx.arc(c.x + c.r * 0.85, cy - c.r * 0.15, c.r * 0.8, 0, Math.PI * 2);
+        }
         ctx.fill();
-      });
-    }
+      }
+    });
 
     // FEVER中のキラキラ演出（空の色は変えず、光の粒と外枠の輝きだけをプラス）
     if (feverTimer > 0) {
@@ -743,6 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initialTimeLeft = timeLeft;
     smoothTimeLeft = timeLeft;
     lastSecondTickAt = 0;
+    lastCloudFrameTime = performance.now();
 
     if (spawnTimer) clearInterval(spawnTimer);
     if (countTimer) clearInterval(countTimer);
