@@ -184,10 +184,47 @@ document.addEventListener('DOMContentLoaded', () => {
   let clockSpawnedCount = 0;
   let maxClockCount = 3;
 
-  // 状態タイマー
+  // 状態タイマー（stunTimer: しびれ残り秒数）
   let stunTimer = 0;
   let feverTimer = 0;
   let feverMaxDuration = 5;
+
+  // しびれ解除の1秒前に、画面一番上（y = -itemSize）から自然に障害物を落下させる
+  // 「すぐ動けば確実に避けられるが、最初の一歩が遅れると避けきれない」速度に調整
+  function spawnTopApproachingHazard() {
+    if (selectedDifficulty === 'easy') return;
+
+    // 発生確率：NORMAL 15% / HARD 30%（たまにやってくる緊張感）
+    const chance = (selectedDifficulty === 'hard') ? 0.30 : 0.15;
+    if (Math.random() >= chance) return;
+
+    const isHard = (selectedDifficulty === 'hard');
+    // いがぐり（70%）と爆弾（30%）の両方がランダムで降ってくる
+    const isBomb = Math.random() < 0.30;
+    const type = isBomb ? 'bomb' : 'chestnut';
+    const itemSize = (type === 'chestnut') ? 49 : 40;
+
+    // 終盤でも理不尽に速くなりすぎないよう速度ボーナスは控えめ（最大+1.0）に制限
+    const speedBonus = Math.min(score / 150, 1.0);
+
+    // HARD: 7.4〜7.9（復活後約0.7秒で到達 → すぐ動けば回避、一歩遅れると被弾）
+    // NORMAL: 6.2〜6.6（復活後約0.85秒で到達 → HARDより少し余裕あり）
+    const speed = (isHard ? (isBomb ? 7.9 : 7.4) : (isBomb ? 6.6 : 6.2)) + speedBonus;
+
+    // プレイヤーのド真ん中（±10pxのわずかな揺らぎ）を狙うため、しっかり一歩動かないと避けられない
+    const jitter = (Math.random() - 0.5) * 20;
+    const rawX = player.x + (player.width - itemSize) / 2 + jitter;
+    const itemX = Math.max(0, Math.min(canvas.width - itemSize, rawX));
+
+    items.push({
+      x: itemX,
+      y: -itemSize,
+      width: itemSize,
+      height: itemSize,
+      type: type,
+      speed: speed
+    });
+  }
 
   // コンボ
   let combo = 0;
@@ -289,13 +326,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // スマホ・タブレット専用：画面全体どこからでも反応する「両手タップ＆片手スライド」操作
   function handleTouchInput(e) {
-    // プレイ画面表示中かつゲームオーバー前のみ有効にする
     if (isGameOver) return;
     if (canvas.style.display === 'none') return;
     if (authScreen && authScreen.style.display !== 'none') return;
     if (guideScreen && guideScreen.style.display !== 'none') return;
 
-    // プレイ中の右上「ホーム」ボタンをタップしたときは移動扱いにしない
     if (e.type === 'touchstart' && e.touches.length === 1) {
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
@@ -313,13 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
     }
 
-    // 指がすべて離れた場合
     if (e.touches.length === 0) {
       resetTouchState();
       return;
     }
 
-    // 【ルール1】2本以上の指が触れているときは100%「両手タップ」モードにする（誤作動防止）
     if (e.touches.length >= 2) {
       slideState.active = false;
       slideState.touchId = null;
@@ -343,7 +376,6 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 【ルール2】指が1本だけの場合：最初はタップ待機し、12px以上横に動かしたら「片手スライド」に切り替える
     const t = e.touches[0];
     if (!slideState.active || slideState.touchId !== t.identifier) {
       slideState.active = true;
@@ -356,10 +388,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const deltaScreenX = t.clientX - slideState.startScreenX;
 
-    // 12px以上横に滑らせた時点で片手スライドモードへ移行
     if (!slideState.isSliding && Math.abs(deltaScreenX) >= 12) {
       slideState.isSliding = true;
-      // スライド開始地点を基準にし直してガクッと飛ぶのを防ぐ
       slideState.startScreenX = t.clientX;
       slideState.startPlayerX = player.x;
       keys.left = false;
@@ -375,7 +405,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const moveCanvasX = (t.clientX - slideState.startScreenX) * scaleX * SLIDE_SENSITIVITY;
       const rawTarget = slideState.startPlayerX + moveCanvasX;
 
-      // 【壁での折り返し補正】左端・右端の壁を超えた分は基準位置を自動更新し、少しでも指を戻した瞬間にすぐ反対へ動けるようにする
       if (rawTarget < 0) {
         slideState.targetX = 0;
         slideState.startScreenX = t.clientX;
@@ -388,7 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
         slideState.targetX = rawTarget;
       }
     } else {
-      // まだ12px未満（その場タップ・長押し）なら従来通り左右ボタンとして動かす
       const isLeft = t.clientX < window.innerWidth / 2;
       keys.left = isLeft;
       keys.right = !isLeft;
@@ -397,7 +425,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 画面全体（ゲーム画面・その直下の余白・ボタンエリアすべて）で指のタッチ・スライドを受け付ける
   document.addEventListener('touchstart', handleTouchInput, { passive: false });
   document.addEventListener('touchmove', handleTouchInput, { passive: false });
   document.addEventListener('touchend', handleTouchInput, { passive: false });
@@ -405,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     resetTouchState();
   });
 
-  // キャンバスクリック判定（プレイ中のホームボタン＆ゲームオーバー画面の各種ボタン用）
+  // キャンバスクリック判定
   canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const scaleX = canvas.width / rect.width;
@@ -413,7 +440,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const clickX = (e.clientX - rect.left) * scaleX;
     const clickY = (e.clientY - rect.top) * scaleY;
 
-    // プレイ中（カウントダウン中も含む）の右上「ホーム」ボタン判定
     if (!isGameOver) {
       if (isInsideRect(clickX, clickY, getInGameHomeButton())) {
         returnToHome();
@@ -423,7 +449,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const buttons = getGameOverButtons();
 
-    // 難易度切り替えボタン判定
     ['easy', 'normal', 'hard'].forEach(diffKey => {
       const btn = buttons[diffKey];
       if (isInsideRect(clickX, clickY, btn)) {
@@ -432,25 +457,22 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 「アイテム説明」ボタン判定
     if (isInsideRect(clickX, clickY, buttons.guide)) {
       openGuide('gameover');
       return;
     }
 
-    // 「ホームへ戻る」ボタン判定
     if (isInsideRect(clickX, clickY, buttons.home)) {
       returnToHome();
       return;
     }
 
-    // 「もう一度遊ぶ」ボタン判定
     if (isInsideRect(clickX, clickY, buttons.retry)) {
       resetAndStartGame();
     }
   });
 
-  // スタートボタン処理（ニックネームを端末に記憶・ピンコードはコメントアウト）
+  // スタートボタン処理
   if (startBtn) {
     startBtn.onclick = function () {
       const rawName = usernameInput.value.trim();
@@ -462,18 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.removeItem(STORAGE_NAME_KEY);
       }
 
-      /* ピンコード入力チェック（今回未使用のためコメントアウト）
-      const pincode = pincodeInput.value.trim();
-      if (!username || !pincode) {
-        alert('ユーザー名と4桁のピンコードを入力してください！');
-        return;
-      }
-      if (pincode.length !== 4 || isNaN(pincode)) {
-        alert('ピンコードは半角の4桁の数字で入力してください！');
-        return;
-      }
-      */
-
       currentUsername = username;
       authScreen.style.display = 'none';
       if (guideScreen) guideScreen.style.display = 'none';
@@ -483,7 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  // ゲーム本編の落下＆制限時間タイマーを動かす関数（カウントダウン完了後に呼ばれる）
+  // ゲーム本編の落下＆制限時間タイマーを動かす関数
   function beginActiveGameplay() {
     isCountingDown = false;
     countdownText = '';
@@ -496,7 +506,13 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         endGame();
       }
-      if (stunTimer > 0) stunTimer--;
+      if (stunTimer > 0) {
+        stunTimer--;
+        // しびれ解除の1秒前（残り1sになった瞬間）に画面一番上から自然に障害物を降らせる
+        if (stunTimer === 1) {
+          spawnTopApproachingHazard();
+        }
+      }
       if (feverTimer > 0) {
         feverTimer--;
         if (feverTimer === 0) {
@@ -529,7 +545,6 @@ document.addEventListener('DOMContentLoaded', () => {
     items.length = 0;
     isGameOver = false;
 
-    // 難易度に応じた制限時間・時計出現上限・フィーバー時間
     if (selectedDifficulty === 'easy') {
       timeLeft = 45;
       maxClockCount = 3;
@@ -548,7 +563,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (countTimer) clearInterval(countTimer);
     if (countdownTimer) clearTimeout(countdownTimer);
 
-    // 0.7秒間隔で「3 → 2 → 1 → START!」を表示してからゲーム開始
     isCountingDown = true;
     const steps = ['3', '2', '1', 'START!'];
     let stepIndex = 0;
@@ -562,7 +576,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (stepIndex < steps.length) {
         countdownTimer = setTimeout(runCountdownStep, 700);
       } else {
-        // 「START!」を0.45秒見せてからゲーム本編を開始
         countdownTimer = setTimeout(() => {
           if (!isGameOver) {
             beginActiveGameplay();
@@ -577,7 +590,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startSpawning() {
     if (spawnTimer) clearInterval(spawnTimer);
-    const interval = feverTimer > 0 ? 200 : (selectedDifficulty === 'hard' ? 450 : 550);
+    const interval = feverTimer > 0 ? 200 : (selectedDifficulty === 'hard' ? 370 : 550);
     spawnTimer = setInterval(spawnItem, interval);
   }
 
@@ -586,7 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rand = Math.random();
     let baseSpeed = 3.5;
     if (selectedDifficulty === 'easy') baseSpeed = 3.0;
-    if (selectedDifficulty === 'hard') baseSpeed = 4.5;
+    if (selectedDifficulty === 'hard') baseSpeed = 5.4;
     const speedBonus = Math.min(score / 50, 3.5);
 
     let type = 'strawberry';
@@ -594,24 +607,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (feverTimer > 0) {
       if (selectedDifficulty === 'easy') {
-        // EASY：スター30% / りんご40% / いちご30%（障害物なし）
         if (rand < 0.30) { type = 'star'; speed = 8.5 + speedBonus; }
         else if (rand < 0.70) { type = 'apple'; speed = 6.0 + speedBonus; }
         else { type = 'strawberry'; speed = 5.0 + speedBonus; }
       } else if (selectedDifficulty === 'normal') {
-        // NORMAL：スター20% / りんご35% / いちご30% / いがぐり10% / 爆弾5%
         if (rand < 0.20) { type = 'star'; speed = 9.0 + speedBonus; }
         else if (rand < 0.55) { type = 'apple'; speed = 6.0 + speedBonus; }
         else if (rand < 0.85) { type = 'strawberry'; speed = 5.0 + speedBonus; }
         else if (rand < 0.95) { type = 'chestnut'; speed = 6.5 + speedBonus; }
         else { type = 'bomb'; speed = 7.5 + speedBonus; }
       } else {
-        // HARD：スター15% / りんご25% / いちご30% / いがぐり15% / 爆弾15%
-        if (rand < 0.15) { type = 'star'; speed = 10.0 + speedBonus; }
-        else if (rand < 0.40) { type = 'apple'; speed = 7.0 + speedBonus; }
-        else if (rand < 0.70) { type = 'strawberry'; speed = 6.0 + speedBonus; }
-        else if (rand < 0.85) { type = 'chestnut'; speed = 7.5 + speedBonus; }
-        else { type = 'bomb'; speed = 8.5 + speedBonus; }
+        if (rand < 0.15) { type = 'star'; speed = 10.5 + speedBonus; }
+        else if (rand < 0.40) { type = 'apple'; speed = 7.5 + speedBonus; }
+        else if (rand < 0.65) { type = 'strawberry'; speed = 6.5 + speedBonus; }
+        else if (rand < 0.83) { type = 'chestnut'; speed = 8.2 + speedBonus; }
+        else { type = 'bomb'; speed = 9.2 + speedBonus; }
+      }
+    } else if (selectedDifficulty === 'hard') {
+      if (rand < 0.05) {
+        type = 'star';
+        speed = baseSpeed + 4.8 + speedBonus;
+      } else if (rand < 0.11 && clockSpawnedCount < maxClockCount) {
+        type = 'clock';
+        speed = baseSpeed + 1.8 + speedBonus;
+        clockSpawnedCount++;
+      } else if (rand < 0.29) {
+        type = 'bomb';
+        speed = baseSpeed + 3.2 + speedBonus;
+      } else if (rand < 0.63) {
+        type = 'chestnut';
+        speed = baseSpeed + 2.2 + speedBonus;
+      } else if (rand < 0.82) {
+        type = 'apple';
+        speed = baseSpeed + 1.2 + speedBonus;
+      } else {
+        type = 'strawberry';
+        speed = baseSpeed + speedBonus;
       }
     } else {
       if (rand < 0.05) {
@@ -636,7 +667,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // いがぐりだけ中間サイズ（49px）にする
     const itemSize = (type === 'chestnut') ? 49 : 40;
     const itemX = Math.random() * (canvas.width - itemSize);
     items.push({ x: itemX, y: -itemSize, width: itemSize, height: itemSize, type: type, speed: speed });
@@ -645,7 +675,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function update() {
     if (isGameOver || isCountingDown) return;
 
-    // 足元ポップアップのアニメーション更新
     for (let i = footPopups.length - 1; i >= 0; i--) {
       footPopups[i].y += 0.25;
       footPopups[i].alpha -= 0.03;
@@ -656,7 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (stunTimer === 0) {
       if (slideState.isSliding && slideState.targetX !== null) {
-        // 片手スライド追従：目標位置に向かって移動（最高速度 player.speed を上限にしてゲームバランス維持）
         const diff = slideState.targetX - player.x;
         if (Math.abs(diff) <= player.speed) {
           player.x = slideState.targetX;
@@ -664,12 +692,10 @@ document.addEventListener('DOMContentLoaded', () => {
           player.x += Math.sign(diff) * player.speed;
         }
       } else {
-        // 従来のキーボード＆両手タップ操作
         if (keys.left && player.x > 0) player.x -= player.speed;
         if (keys.right && player.x < canvas.width - player.width) player.x += player.speed;
       }
     } else if (slideState.isSliding) {
-      // しびれ解除後に急にワープしないよう基準位置を現在地に同期
       slideState.startPlayerX = player.x;
       slideState.targetX = player.x;
     }
@@ -678,7 +704,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const item = items[i];
       item.y += item.speed;
 
-      // いがぐりのサイズ（49px）に合わせた当たり判定の余白
       const pad = (item.type === 'chestnut') ? 4 : 0;
 
       if (
@@ -687,12 +712,20 @@ document.addEventListener('DOMContentLoaded', () => {
         player.y < item.y + item.height - pad &&
         player.y + player.height > item.y + pad
       ) {
-        // 獲得アイテムの回数を記録
+        const isHazard = (item.type === 'chestnut' || item.type === 'bomb');
+
+        // しびれ中（動けない間）のみ障害アイテムをすり抜ける
+        if (isHazard && stunTimer > 0) {
+          if (item.y > canvas.height) {
+            items.splice(i, 1);
+          }
+          continue;
+        }
+
         if (itemStats[item.type] !== undefined) {
           itemStats[item.type]++;
         }
 
-        // フィーバー中の得点・減点倍率（EASY:1倍 / NORMAL:プラス1.2倍 / HARD:プラス2.0倍・マイナス1.5倍）
         let plusMultiplier = 1.0;
         let minusMultiplier = 1.0;
         if (feverTimer > 0) {
@@ -726,13 +759,13 @@ document.addEventListener('DOMContentLoaded', () => {
           addFootPopup('+5s!', '#70a1ff');
         } else if (item.type === 'chestnut') {
           combo = 0;
-          const lost = Math.ceil(1 * minusMultiplier); // 通常:1 / HARDフィーバー:2
+          const lost = Math.ceil(1 * minusMultiplier);
           score = Math.max(0, score - lost);
           stunTimer = 3;
           addFootPopup(`-${lost}`, '#ff6b81');
         } else if (item.type === 'bomb') {
           combo = 0;
-          const lost = Math.ceil(5 * minusMultiplier); // 通常:5 / HARDフィーバー:8
+          const lost = Math.ceil(5 * minusMultiplier);
           score = Math.max(0, score - lost);
           stunTimer = 5;
           addFootPopup(`-${lost}`, '#ff4757');
@@ -750,7 +783,6 @@ document.addEventListener('DOMContentLoaded', () => {
     clearInterval(spawnTimer);
     clearInterval(countTimer);
 
-    // 難易度別の自己ベスト更新チェック＆端末保存
     const prevBest = bestScores[selectedDifficulty] || 0;
     if (score > prevBest) {
       bestScores[selectedDifficulty] = score;
@@ -758,12 +790,10 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         localStorage.setItem(STORAGE_BEST_KEY, JSON.stringify(bestScores));
       } catch (e) {
-        // 保存エラー時は無視
       }
     }
   }
 
-  // いがぐりの丸型切り抜き描画ヘルパー（ゲーム中＆リザルト共通）
   function drawChestnutIcon(x, y, size) {
     const img = itemImages.chestnut;
     if (!img || !img.complete || img.naturalWidth === 0) return;
@@ -795,18 +825,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // プレイヤー描画
     ctx.save();
     if (stunTimer > 0) {
       ctx.globalAlpha = 0.5;
-    } else if (feverTimer > 0) {
+    }
+
+    if (feverTimer > 0) {
       ctx.shadowBlur = 25;
       ctx.shadowColor = '#fffa65';
     }
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
     ctx.restore();
 
-    // ハリネズミの足元ポップアップ描画（落下アイテムの視界を邪魔しない下側スペース）
     footPopups.forEach(p => {
       ctx.save();
       ctx.globalAlpha = Math.max(0, p.alpha);
@@ -837,7 +867,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.textAlign = 'left';
     }
 
-    // アイテム描画
     items.forEach(item => {
       const img = itemImages[item.type];
       if (!img || !img.complete) return;
@@ -853,7 +882,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // UI表示（左上にプレイヤー名・スコア・選択中の難易度のBESTスコア）
     const currentBest = Math.max(score, bestScores[selectedDifficulty] || 0);
     ctx.fillStyle = '#ffffff';
     ctx.font = '22px sans-serif';
@@ -870,12 +898,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.fillText(`COMBO x${combo}!`, 25, 125);
     }
 
-    // 右上の残り時間
     ctx.fillStyle = timeLeft <= 5 ? '#ff4757' : '#ffffff';
     ctx.font = '22px sans-serif';
     ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 130, 35);
 
-    // プレイ中の右上「ホーム」ボタン描画
     if (!isGameOver) {
       const mobile = isMobileDevice();
       const homeBtn = getInGameHomeButton();
@@ -899,16 +925,13 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.restore();
     }
 
-    // カウントダウン中の描画（3 → 2 → 1 → START! ＋ 操作ガイド表示）
     if (isCountingDown && countdownText) {
       const mobile = isMobileDevice();
       const elapsed = performance.now() - countdownStepStart;
-      // 最初の0.22秒でポンッと拡大してから通常サイズに戻るアニメーション
       const progress = Math.min(elapsed / 220, 1);
       const scale = 0.65 + 0.35 * Math.sin(progress * (Math.PI / 2));
 
       ctx.save();
-      // 背景をうっすら暗くして文字を見やすくする
       ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -922,19 +945,16 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
-      // 外側のフチ取り
       ctx.lineWidth = mobile ? 14 : 10;
       ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
       ctx.strokeText(countdownText, 0, 0);
 
-      // 文字本体（START!は黄色、数字は白）
       ctx.fillStyle = isStart ? '#fffa65' : '#ffffff';
       ctx.shadowBlur = 24;
       ctx.shadowColor = isStart ? 'rgba(255, 250, 101, 0.9)' : 'rgba(112, 161, 255, 0.85)';
       ctx.fillText(countdownText, 0, 0);
       ctx.restore();
 
-      // カウントダウン文字の下に操作ガイドを表示
       const hintText = mobile ? '◀ タップ または スライドで移動 ▶' : '◀ 矢印キー（← →）で移動 ▶';
       const hintY = canvas.height / 2 + (mobile ? 95 : 68);
       ctx.font = mobile ? 'bold 30px sans-serif' : 'bold 18px sans-serif';
@@ -949,7 +969,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.restore();
     }
 
-    // GAME OVER 表示
     if (isGameOver) {
       const mobile = isMobileDevice();
       const buttons = getGameOverButtons();
@@ -963,7 +982,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.textAlign = 'center';
       ctx.fillText('GAME OVER', canvas.width / 2, mobile ? canvas.height / 2 - 190 : canvas.height / 2 - 125);
 
-      // 新記録のときは金色で「NEW RECORD!」を表示
       if (isNewRecord && score > 0) {
         ctx.fillStyle = '#fffa65';
         ctx.font = mobile ? 'bold 34px sans-serif' : 'bold 20px sans-serif';
@@ -978,7 +996,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.font = mobile ? 'bold 28px sans-serif' : '18px sans-serif';
       ctx.fillText(`${selectedDifficulty.toUpperCase()} 自己ベスト: ${diffBest}`, canvas.width / 2, mobile ? canvas.height / 2 - 46 : canvas.height / 2 - 22);
 
-      // 獲得アイテム内訳バー（6種類のアイコン＋個数を横1列に並べる）
       const statList = [
         { key: 'apple', color: '#7bed9f' },
         { key: 'strawberry', color: '#7bed9f' },
@@ -1027,7 +1044,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       ctx.textAlign = 'center';
 
-      // 1. 「もう一度遊ぶ」ボタン描画
       const retry = buttons.retry;
       ctx.fillStyle = '#ff4757';
       ctx.beginPath();
@@ -1041,7 +1057,6 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.font = mobile ? 'bold 34px sans-serif' : 'bold 18px sans-serif';
       ctx.fillText(retry.label, canvas.width / 2, retry.y + (mobile ? 49 : 26));
 
-      // 2. 難易度切り替えボタン（EASY / NORMAL / HARD）描画
       ['easy', 'normal', 'hard'].forEach(diffKey => {
         const btn = buttons[diffKey];
         const isSelected = (selectedDifficulty === btn.diff);
@@ -1071,7 +1086,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText(btn.label, btn.x + btn.width / 2, btn.y + (mobile ? 38 : 22));
       });
 
-      // 3. 「アイテム説明」＆「ホームへ戻る」ボタン描画（横並び）
       [buttons.guide, buttons.home].forEach(subBtn => {
         ctx.fillStyle = '#4b6584';
         ctx.beginPath();
