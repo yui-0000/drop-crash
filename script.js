@@ -210,7 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const items = [];
   const keys = { left: false, right: false };
 
-  // 片手スライド追従用の管理状態（1本指で12px以上横に動かしたときだけ有効）
+  // 片手スライド追従用の管理状態（感度2.35倍＋壁での折り返し補正つき）
+  const SLIDE_SENSITIVITY = 2.35;
   const slideState = {
     active: false,
     touchId: null,
@@ -368,12 +369,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (slideState.isSliding) {
-      // 指の移動量に合わせて目標X座標を更新（少し余裕を持って端まで届く倍率1.35）
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / (rect.width || window.innerWidth);
-      const moveCanvasX = (t.clientX - slideState.startScreenX) * scaleX * 1.35;
+      const maxX = canvas.width - player.width;
+      const moveCanvasX = (t.clientX - slideState.startScreenX) * scaleX * SLIDE_SENSITIVITY;
       const rawTarget = slideState.startPlayerX + moveCanvasX;
-      slideState.targetX = Math.max(0, Math.min(canvas.width - player.width, rawTarget));
+
+      // 【壁での折り返し補正】左端・右端の壁を超えた分は基準位置を自動更新し、少しでも指を戻した瞬間にすぐ反対へ動けるようにする
+      if (rawTarget < 0) {
+        slideState.targetX = 0;
+        slideState.startScreenX = t.clientX;
+        slideState.startPlayerX = 0;
+      } else if (rawTarget > maxX) {
+        slideState.targetX = maxX;
+        slideState.startScreenX = t.clientX;
+        slideState.startPlayerX = maxX;
+      } else {
+        slideState.targetX = rawTarget;
+      }
     } else {
       // まだ12px未満（その場タップ・長押し）なら従来通り左右ボタンとして動かす
       const isLeft = t.clientX < window.innerWidth / 2;
@@ -886,7 +899,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.restore();
     }
 
-    // カウントダウン中の描画（3 → 2 → 1 → START!）
+    // カウントダウン中の描画（3 → 2 → 1 → START! ＋ 操作ガイド表示）
     if (isCountingDown && countdownText) {
       const mobile = isMobileDevice();
       const elapsed = performance.now() - countdownStepStart;
@@ -896,10 +909,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       ctx.save();
       // 背景をうっすら暗くして文字を見やすくする
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.38)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2 - (mobile ? 18 : 14));
       ctx.scale(scale, scale);
 
       const isStart = (countdownText === 'START!');
@@ -918,6 +932,20 @@ document.addEventListener('DOMContentLoaded', () => {
       ctx.shadowBlur = 24;
       ctx.shadowColor = isStart ? 'rgba(255, 250, 101, 0.9)' : 'rgba(112, 161, 255, 0.85)';
       ctx.fillText(countdownText, 0, 0);
+      ctx.restore();
+
+      // カウントダウン文字の下に操作ガイドを表示
+      const hintText = mobile ? '◀ タップ または スライドで移動 ▶' : '◀ 矢印キー（← →）で移動 ▶';
+      const hintY = canvas.height / 2 + (mobile ? 95 : 68);
+      ctx.font = mobile ? 'bold 30px sans-serif' : 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = mobile ? 7 : 5;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.85)';
+      ctx.strokeText(hintText, canvas.width / 2, hintY);
+      ctx.fillStyle = '#7bed9f';
+      ctx.fillText(hintText, canvas.width / 2, hintY);
+
       ctx.restore();
     }
 
