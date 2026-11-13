@@ -40,6 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // タッチ状態（両手タップ＆片手スライド判定）をリセットするヘルパー
+  function resetTouchState() {
+    keys.left = false;
+    keys.right = false;
+    slideState.active = false;
+    slideState.touchId = null;
+    slideState.isSliding = false;
+    slideState.targetX = null;
+    if (btnLeft) btnLeft.classList.remove('active');
+    if (btnRight) btnRight.classList.remove('active');
+  }
+
   // ゲーム画面（プレイ中・GAME OVER画面の両方）からホーム画面へ戻る処理
   function returnToHome() {
     isGameOver = true;
@@ -49,10 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
       clearTimeout(countdownTimer);
       countdownTimer = null;
     }
-    keys.left = false;
-    keys.right = false;
-    if (btnLeft) btnLeft.classList.remove('active');
-    if (btnRight) btnRight.classList.remove('active');
+    resetTouchState();
     if (spawnTimer) clearInterval(spawnTimer);
     if (countTimer) clearInterval(countTimer);
     canvas.style.display = 'none';
@@ -201,6 +210,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const items = [];
   const keys = { left: false, right: false };
 
+  // 片手スライド追従用の管理状態（1本指で12px以上横に動かしたときだけ有効）
+  const slideState = {
+    active: false,
+    touchId: null,
+    startScreenX: 0,
+    startPlayerX: 0,
+    isSliding: false,
+    targetX: null
+  };
+
   // スマホ・タッチ端末判定（横向きでも確実にスマホ判定する）
   function isMobileDevice() {
     return (
@@ -267,8 +286,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'ArrowRight') keys.right = false;
   });
 
-  // スマホ・タブレット専用：画面上のどの位置に指があっても（滑らせても）左右判定を維持する
-  function updateScreenTouchDirection(e) {
+  // スマホ・タブレット専用：両手タップ＆片手スライドのハイブリッド操作
+  function handleTouchInput(e) {
     if (isGameOver) return;
     if (canvas.style.display === 'none') return;
 
@@ -287,46 +306,87 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     e.preventDefault();
-    const screenHalfX = window.innerWidth / 2;
-    let touchLeft = false;
-    let touchRight = false;
 
-    for (let i = 0; i < e.touches.length; i++) {
-      const x = e.touches[i].clientX;
-      if (x < screenHalfX) {
-        touchLeft = true;
-      } else {
-        touchRight = true;
-      }
+    // 指がすべて離れた場合
+    if (e.touches.length === 0) {
+      resetTouchState();
+      return;
     }
 
-    keys.left = touchLeft;
-    keys.right = touchRight;
-    if (btnLeft) btnLeft.classList.toggle('active', touchLeft);
-    if (btnRight) btnRight.classList.toggle('active', touchRight);
+    // 【ルール1】2本以上の指が触れているときは100%「両手タップ」モードにする（誤作動防止）
+    if (e.touches.length >= 2) {
+      slideState.active = false;
+      slideState.touchId = null;
+      slideState.isSliding = false;
+      slideState.targetX = null;
+
+      const screenHalfX = window.innerWidth / 2;
+      let touchLeft = false;
+      let touchRight = false;
+      for (let i = 0; i < e.touches.length; i++) {
+        if (e.touches[i].clientX < screenHalfX) {
+          touchLeft = true;
+        } else {
+          touchRight = true;
+        }
+      }
+      keys.left = touchLeft;
+      keys.right = touchRight;
+      if (btnLeft) btnLeft.classList.toggle('active', touchLeft);
+      if (btnRight) btnRight.classList.toggle('active', touchRight);
+      return;
+    }
+
+    // 【ルール2】指が1本だけの場合：最初はタップ待機し、12px以上横に動かしたら「片手スライド」に切り替える
+    const t = e.touches[0];
+    if (!slideState.active || slideState.touchId !== t.identifier) {
+      slideState.active = true;
+      slideState.touchId = t.identifier;
+      slideState.startScreenX = t.clientX;
+      slideState.startPlayerX = player.x;
+      slideState.isSliding = false;
+      slideState.targetX = null;
+    }
+
+    const deltaScreenX = t.clientX - slideState.startScreenX;
+
+    // 12px以上横に滑らせた時点で片手スライドモードへ移行
+    if (!slideState.isSliding && Math.abs(deltaScreenX) >= 12) {
+      slideState.isSliding = true;
+      // スライド開始地点を基準にし直してガクッと飛ぶのを防ぐ
+      slideState.startScreenX = t.clientX;
+      slideState.startPlayerX = player.x;
+      keys.left = false;
+      keys.right = false;
+      if (btnLeft) btnLeft.classList.remove('active');
+      if (btnRight) btnRight.classList.remove('active');
+    }
+
+    if (slideState.isSliding) {
+      // 指の移動量に合わせて目標X座標を更新（少し余裕を持って端まで届く倍率1.35）
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / (rect.width || window.innerWidth);
+      const moveCanvasX = (t.clientX - slideState.startScreenX) * scaleX * 1.35;
+      const rawTarget = slideState.startPlayerX + moveCanvasX;
+      slideState.targetX = Math.max(0, Math.min(canvas.width - player.width, rawTarget));
+    } else {
+      // まだ12px未満（その場タップ・長押し）なら従来通り左右ボタンとして動かす
+      const isLeft = t.clientX < window.innerWidth / 2;
+      keys.left = isLeft;
+      keys.right = !isLeft;
+      if (btnLeft) btnLeft.classList.toggle('active', isLeft);
+      if (btnRight) btnRight.classList.toggle('active', !isLeft);
+    }
   }
 
   // 操作ボタンエリア＆ゲーム画面の両方で指のタッチ・スライドを追跡
   [touchControls, canvas].forEach(el => {
     if (!el) return;
-    el.addEventListener('touchstart', updateScreenTouchDirection, { passive: false });
-    el.addEventListener('touchmove', updateScreenTouchDirection, { passive: false });
-    el.addEventListener('touchend', (e) => {
-      if (isGameOver) return;
-      if (e.touches.length === 0) {
-        keys.left = false;
-        keys.right = false;
-        if (btnLeft) btnLeft.classList.remove('active');
-        if (btnRight) btnRight.classList.remove('active');
-      } else {
-        updateScreenTouchDirection(e);
-      }
-    }, { passive: false });
+    el.addEventListener('touchstart', handleTouchInput, { passive: false });
+    el.addEventListener('touchmove', handleTouchInput, { passive: false });
+    el.addEventListener('touchend', handleTouchInput, { passive: false });
     el.addEventListener('touchcancel', () => {
-      keys.left = false;
-      keys.right = false;
-      if (btnLeft) btnLeft.classList.remove('active');
-      if (btnRight) btnRight.classList.remove('active');
+      resetTouchState();
     });
   });
 
@@ -412,10 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function beginActiveGameplay() {
     isCountingDown = false;
     countdownText = '';
-    keys.left = false;
-    keys.right = false;
-    if (btnLeft) btnLeft.classList.remove('active');
-    if (btnRight) btnRight.classList.remove('active');
+    resetTouchState();
 
     startSpawning();
     countTimer = setInterval(() => {
@@ -451,10 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
       chestnut: 0,
       bomb: 0
     };
-    keys.left = false;
-    keys.right = false;
-    if (btnLeft) btnLeft.classList.remove('active');
-    if (btnRight) btnRight.classList.remove('active');
+    resetTouchState();
     player.speed = normalSpeed;
     player.x = canvas.width / 2 - 40;
     items.length = 0;
@@ -586,8 +640,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (stunTimer === 0) {
-      if (keys.left && player.x > 0) player.x -= player.speed;
-      if (keys.right && player.x < canvas.width - player.width) player.x += player.speed;
+      if (slideState.isSliding && slideState.targetX !== null) {
+        // 片手スライド追従：目標位置に向かって移動（最高速度 player.speed を上限にしてゲームバランス維持）
+        const diff = slideState.targetX - player.x;
+        if (Math.abs(diff) <= player.speed) {
+          player.x = slideState.targetX;
+        } else {
+          player.x += Math.sign(diff) * player.speed;
+        }
+      } else {
+        // 従来のキーボード＆両手タップ操作
+        if (keys.left && player.x > 0) player.x -= player.speed;
+        if (keys.right && player.x < canvas.width - player.width) player.x += player.speed;
+      }
+    } else if (slideState.isSliding) {
+      // しびれ解除後に急にワープしないよう基準位置を現在地に同期
+      slideState.startPlayerX = player.x;
+      slideState.targetX = player.x;
     }
 
     for (let i = items.length - 1; i >= 0; i--) {
@@ -662,10 +731,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function endGame() {
     isGameOver = true;
-    keys.left = false;
-    keys.right = false;
-    if (btnLeft) btnLeft.classList.remove('active');
-    if (btnRight) btnRight.classList.remove('active');
+    resetTouchState();
     clearInterval(spawnTimer);
     clearInterval(countTimer);
 
