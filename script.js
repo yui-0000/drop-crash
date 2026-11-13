@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
+
   const authScreen = document.getElementById('authScreen');
   const guideScreen = document.getElementById('guideScreen');
   const openGuideBtn = document.getElementById('openGuideBtn');
@@ -138,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chestnut: new Image(),
     bomb: new Image()
   };
+
   itemImages.apple.src = 'images/apple.png';
   itemImages.strawberry.src = 'images/strawberry.png';
   itemImages.star.src = 'images/star.png';
@@ -189,11 +191,191 @@ document.addEventListener('DOMContentLoaded', () => {
   let feverTimer = 0;
   let feverMaxDuration = 5;
 
+  // ★背景モード切り替えスイッチ
+  // true  = 残り時間で「昼の青空 → 夕方 → トワイライト星空」へ滑らかに変化
+  // false = ずっと明るい「昼の青空＆芝生」固定（FEVER中だけキラキラ演出）
+  const ENABLE_TIME_CYCLE = true;
+  let initialTimeLeft = 50;
+  let lastSecondTickAt = 0; // 直前に1秒カウントが減った時刻（滑らか補間用）
+  let smoothTimeLeft = 50;  // 毎フレーム滑らかに減る表示用残り時間
+
+  // 夜空用の星データ（ランダム配置を固定）
+  const bgStars = Array.from({ length: 45 }, () => ({
+    rx: Math.random(),
+    ry: Math.random() * 0.78,
+    size: Math.random() * 2 + 1.2,
+    phase: Math.random() * Math.PI * 2
+  }));
+
+  // 滑らかなイージング関数（色の変化の始まりと終わりを自然にする）
+  function easeInOut(t) {
+    const clamped = Math.max(0, Math.min(1, t));
+    return clamped * clamped * (3 - 2 * clamped);
+  }
+
+  // 背景描画関数（昼・夕方・夜をキープしつつ、切り替え時は毎フレーム滑らかにフェード）
+  function drawDynamicBackground() {
+    const lerp = (a, b, t) => Math.round(a + (b - a) * t);
+    const lerpColor = (c1, c2, t) =>
+      `rgb(${lerp(c1[0], c2[0], t)}, ${lerp(c1[1], c2[1], t)}, ${lerp(c1[2], c2[2], t)})`;
+
+    // プレイ中・カウントダウン終了後はミリ秒単位で滑らかに時間を進める
+    if (!isGameOver && !isCountingDown && lastSecondTickAt > 0) {
+      const subSec = Math.min(1, (performance.now() - lastSecondTickAt) / 1000);
+      const targetSmooth = Math.max(0, timeLeft - subSec);
+      // 時計アイテム(+5s)を取って時間が増えたときは滑らかに追従
+      if (targetSmooth > smoothTimeLeft) {
+        smoothTimeLeft += (targetSmooth - smoothTimeLeft) * 0.12;
+      } else {
+        smoothTimeLeft = targetSmooth;
+      }
+    } else {
+      smoothTimeLeft = timeLeft;
+    }
+
+    const baseTotal = Math.max(initialTimeLeft || 50, smoothTimeLeft);
+    const ratio = ENABLE_TIME_CYCLE
+      ? Math.max(0, Math.min(1, smoothTimeLeft / baseTotal))
+      : 1.0;
+
+    // 各時間帯の色定義
+    const daySkyTop = [116, 185, 255];
+    const daySkyBot = [168, 230, 255];
+    const dayGrassTop = [85, 230, 100];
+    const dayGrassBot = [56, 173, 75];
+
+    const sunsetSkyTop = [255, 118, 117];
+    const sunsetSkyBot = [253, 203, 110];
+    const sunsetGrassTop = [110, 175, 85];
+    const sunsetGrassBot = [75, 130, 60];
+
+    const nightSkyTop = [38, 28, 78];
+    const nightSkyBot = [88, 55, 135];
+    const nightGrassTop = [32, 65, 68];
+    const nightGrassBot = [20, 42, 48];
+
+    let topColor, bottomColor, grassTop, grassBottom, nightAlpha = 0;
+
+    if (ratio >= 0.68) {
+      // 【昼ゾーン】開始〜68%まではくっきり昼の青空をキープ
+      topColor = lerpColor(daySkyTop, daySkyTop, 0);
+      bottomColor = lerpColor(daySkyBot, daySkyBot, 0);
+      grassTop = lerpColor(dayGrassTop, dayGrassTop, 0);
+      grassBottom = lerpColor(dayGrassBot, dayGrassBot, 0);
+    } else if (ratio > 0.58) {
+      // 【昼 → 夕方 切り替え】約5秒かけてジワーッと滑らかに夕焼けへ変化
+      const t = easeInOut((0.68 - ratio) / 0.10);
+      topColor = lerpColor(daySkyTop, sunsetSkyTop, t);
+      bottomColor = lerpColor(daySkyBot, sunsetSkyBot, t);
+      grassTop = lerpColor(dayGrassTop, sunsetGrassTop, t);
+      grassBottom = lerpColor(dayGrassBot, sunsetGrassBot, t);
+    } else if (ratio >= 0.34) {
+      // 【夕方ゾーン】58%〜34%までは鮮やかな夕焼け空をキープ
+      topColor = lerpColor(sunsetSkyTop, sunsetSkyTop, 0);
+      bottomColor = lerpColor(sunsetSkyBot, sunsetSkyBot, 0);
+      grassTop = lerpColor(sunsetGrassTop, sunsetGrassTop, 0);
+      grassBottom = lerpColor(sunsetGrassBot, sunsetGrassBot, 0);
+    } else if (ratio > 0.24) {
+      // 【夕方 → 夜 切り替え】約5秒かけてジワーッと滑らかに星空へ変化
+      const t = easeInOut((0.34 - ratio) / 0.10);
+      topColor = lerpColor(sunsetSkyTop, nightSkyTop, t);
+      bottomColor = lerpColor(sunsetSkyBot, nightSkyBot, t);
+      grassTop = lerpColor(sunsetGrassTop, nightGrassTop, t);
+      grassBottom = lerpColor(sunsetGrassBot, nightGrassBot, t);
+      nightAlpha = t;
+    } else {
+      // 【夜ゾーン】ラスト24%〜終了まではきらめく星空をキープ
+      topColor = lerpColor(nightSkyTop, nightSkyTop, 0);
+      bottomColor = lerpColor(nightSkyBot, nightSkyBot, 0);
+      grassTop = lerpColor(nightGrassTop, nightGrassTop, 0);
+      grassBottom = lerpColor(nightGrassBot, nightGrassBot, 0);
+      nightAlpha = 1;
+    }
+
+    // 空のグラデーション
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGrad.addColorStop(0, topColor);
+    skyGrad.addColorStop(1, bottomColor);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 夕方〜夜の星
+    if (nightAlpha > 0.02) {
+      const now = performance.now() / 400;
+      bgStars.forEach(s => {
+        const twinkle = 0.5 + 0.5 * Math.sin(now + s.phase);
+        ctx.fillStyle = `rgba(255, 250, 180, ${nightAlpha * twinkle})`;
+        ctx.beginPath();
+        ctx.arc(s.rx * canvas.width, s.ry * canvas.height, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // ふわふわ流れるシンプルな雲（昼〜夕方に表示）
+    const cloudAlpha = Math.max(0, 0.85 * (1 - nightAlpha * 0.9));
+    if (cloudAlpha > 0.02) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${cloudAlpha})`;
+      const tSec = performance.now() / 1000;
+      const clouds = [
+        { baseX: 0.15, y: 0.16, r: 28, speed: 12 },
+        { baseX: 0.55, y: 0.24, r: 22, speed: 9 },
+        { baseX: 0.85, y: 0.14, r: 30, speed: 14 }
+      ];
+      clouds.forEach(c => {
+        const cx = ((c.baseX * canvas.width + tSec * c.speed) % (canvas.width + 160)) - 80;
+        const cy = c.y * canvas.height;
+        ctx.beginPath();
+        ctx.arc(cx, cy, c.r, 0, Math.PI * 2);
+        ctx.arc(cx + c.r * 0.9, cy - c.r * 0.2, c.r * 0.8, 0, Math.PI * 2);
+        ctx.arc(cx + c.r * 1.7, cy, c.r * 0.75, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // FEVER中のキラキラ演出（空の色は変えず、光の粒と外枠の輝きだけをプラス）
+    if (feverTimer > 0) {
+      const now = performance.now() / 220;
+      bgStars.slice(0, 18).forEach((s, idx) => {
+        const spark = 0.45 + 0.55 * Math.sin(now + idx * 1.3);
+        ctx.fillStyle = `rgba(255, 255, 220, ${spark})`;
+        ctx.beginPath();
+        ctx.arc(
+          s.rx * canvas.width,
+          (s.ry * canvas.height + now * 22) % (canvas.height - 34),
+          s.size + 1.2,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+      });
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 250, 140, 0.55)';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+      ctx.restore();
+    }
+
+    // 下部の芝生
+    const grassH = 34;
+    const grassY = canvas.height - grassH;
+    const grassGrad = ctx.createLinearGradient(0, grassY, 0, canvas.height);
+    grassGrad.addColorStop(0, grassTop);
+    grassGrad.addColorStop(1, grassBottom);
+    ctx.fillStyle = grassGrad;
+    ctx.fillRect(0, grassY, canvas.width, grassH);
+
+    // 芝生の境界ハイライト線
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.28)';
+    ctx.fillRect(0, grassY, canvas.width, 3);
+
+    return nightAlpha;
+  }
+
   // しびれ解除の1秒前に、画面一番上（y = -itemSize）から自然に障害物を落下させる
   // 「すぐ動けば確実に避けられるが、最初の一歩が遅れると避けきれない」速度に調整
   function spawnTopApproachingHazard() {
     if (selectedDifficulty === 'easy') return;
-
     // 発生確率：NORMAL 15% / HARD 30%（たまにやってくる緊張感）
     const chance = (selectedDifficulty === 'hard') ? 0.30 : 0.15;
     if (Math.random() >= chance) return;
@@ -206,7 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 終盤でも理不尽に速くなりすぎないよう速度ボーナスは控えめ（最大+1.0）に制限
     const speedBonus = Math.min(score / 150, 1.0);
-
     // HARD: 7.4〜7.9（復活後約0.7秒で到達 → すぐ動けば回避、一歩遅れると被弾）
     // NORMAL: 6.2〜6.6（復活後約0.85秒で到達 → HARDより少し余裕あり）
     const speed = (isHard ? (isBomb ? 7.9 : 7.4) : (isBomb ? 6.6 : 6.2)) + speedBonus;
@@ -377,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const t = e.touches[0];
+
     if (!slideState.active || slideState.touchId !== t.identifier) {
       slideState.active = true;
       slideState.touchId = t.identifier;
@@ -498,14 +680,19 @@ document.addEventListener('DOMContentLoaded', () => {
     isCountingDown = false;
     countdownText = '';
     resetTouchState();
+    lastSecondTickAt = performance.now();
+    smoothTimeLeft = timeLeft;
 
     startSpawning();
+
     countTimer = setInterval(() => {
+      lastSecondTickAt = performance.now();
       if (timeLeft > 0) {
         timeLeft--;
       } else {
         endGame();
       }
+
       if (stunTimer > 0) {
         stunTimer--;
         // しびれ解除の1秒前（残り1sになった瞬間）に画面一番上から自然に障害物を降らせる
@@ -513,6 +700,7 @@ document.addEventListener('DOMContentLoaded', () => {
           spawnTopApproachingHazard();
         }
       }
+
       if (feverTimer > 0) {
         feverTimer--;
         if (feverTimer === 0) {
@@ -546,18 +734,15 @@ document.addEventListener('DOMContentLoaded', () => {
     isGameOver = false;
 
     if (selectedDifficulty === 'easy') {
-      timeLeft = 45;
-      maxClockCount = 3;
-      feverMaxDuration = 7;
+      timeLeft = 45; maxClockCount = 3; feverMaxDuration = 7;
     } else if (selectedDifficulty === 'normal') {
-      timeLeft = 50;
-      maxClockCount = 3;
-      feverMaxDuration = 5;
+      timeLeft = 50; maxClockCount = 3; feverMaxDuration = 5;
     } else {
-      timeLeft = 60;
-      maxClockCount = 4;
-      feverMaxDuration = 4;
+      timeLeft = 60; maxClockCount = 4; feverMaxDuration = 4;
     }
+    initialTimeLeft = timeLeft;
+    smoothTimeLeft = timeLeft;
+    lastSecondTickAt = 0;
 
     if (spawnTimer) clearInterval(spawnTimer);
     if (countTimer) clearInterval(countTimer);
@@ -596,12 +781,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function spawnItem() {
     if (isGameOver || isCountingDown) return;
+
     const rand = Math.random();
     let baseSpeed = 3.5;
     if (selectedDifficulty === 'easy') baseSpeed = 3.0;
     if (selectedDifficulty === 'hard') baseSpeed = 5.4;
-    const speedBonus = Math.min(score / 50, 3.5);
 
+    const speedBonus = Math.min(score / 50, 3.5);
     let type = 'strawberry';
     let speed = baseSpeed + speedBonus;
 
@@ -713,7 +899,6 @@ document.addEventListener('DOMContentLoaded', () => {
         player.y + player.height > item.y + pad
       ) {
         const isHazard = (item.type === 'chestnut' || item.type === 'bomb');
-
         // しびれ中（動けない間）のみ障害アイテムをすり抜ける
         if (isHazard && stunTimer > 0) {
           if (item.y > canvas.height) {
@@ -756,6 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
           addFootPopup('FEVER!', '#fffa65');
         } else if (item.type === 'clock') {
           timeLeft += 5;
+          lastSecondTickAt = performance.now();
           addFootPopup('+5s!', '#70a1ff');
         } else if (item.type === 'chestnut') {
           combo = 0;
@@ -770,6 +956,7 @@ document.addEventListener('DOMContentLoaded', () => {
           stunTimer = 5;
           addFootPopup(`-${lost}`, '#ff4757');
         }
+
         items.splice(i, 1);
       } else if (item.y > canvas.height) {
         items.splice(i, 1);
@@ -789,8 +976,7 @@ document.addEventListener('DOMContentLoaded', () => {
       isNewRecord = true;
       try {
         localStorage.setItem(STORAGE_BEST_KEY, JSON.stringify(bestScores));
-      } catch (e) {
-      }
+      } catch (e) {}
     }
   }
 
@@ -825,36 +1011,51 @@ document.addEventListener('DOMContentLoaded', () => {
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // ★背景を描画（nightAlpha: 0=昼/夕方 〜 1=夜）
+    const nightAlpha = drawDynamicBackground();
+
+    // プレイヤー（ハリネズミ）の描画
     ctx.save();
     if (stunTimer > 0) {
       ctx.globalAlpha = 0.5;
     }
-
     if (feverTimer > 0) {
       ctx.shadowBlur = 25;
       ctx.shadowColor = '#fffa65';
+    } else if (nightAlpha > 0.35) {
+      ctx.shadowBlur = 14;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.85)';
     }
     ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
     ctx.restore();
 
+    // 足元のポップアップ演出（昼の青空でも見やすい黒フチつき）
     footPopups.forEach(p => {
       ctx.save();
       ctx.globalAlpha = Math.max(0, p.alpha);
-      ctx.fillStyle = p.color;
       ctx.font = 'bold 18px sans-serif';
       ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.75)';
+      ctx.strokeText(p.text, p.x, p.y);
+      ctx.fillStyle = p.color;
       ctx.fillText(p.text, p.x, p.y);
       ctx.restore();
     });
 
     if (stunTimer > 0) {
-      ctx.fillStyle = '#ff4757';
+      ctx.save();
       ctx.font = 'bold 16px sans-serif';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.strokeText(`痺れている! (${stunTimer}s)`, player.x + 5, player.y - 10);
+      ctx.fillStyle = '#ff4757';
       ctx.fillText(`痺れている! (${stunTimer}s)`, player.x + 5, player.y - 10);
+      ctx.restore();
     }
 
     if (feverTimer > 0) {
-      ctx.fillStyle = '#fffa65';
+      ctx.save();
       ctx.font = 'bold 26px sans-serif';
       ctx.textAlign = 'center';
       let feverLabel = `★ FEVER TIME! (${feverTimer}s) ★`;
@@ -863,10 +1064,15 @@ document.addEventListener('DOMContentLoaded', () => {
       } else if (selectedDifficulty === 'hard') {
         feverLabel = `★ FEVER! SCORE x2 / RISK x1.5 (${feverTimer}s) ★`;
       }
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.strokeText(feverLabel, canvas.width / 2, 75);
+      ctx.fillStyle = '#fffa65';
       ctx.fillText(feverLabel, canvas.width / 2, 75);
-      ctx.textAlign = 'left';
+      ctx.restore();
     }
 
+    // アイテムの描画
     items.forEach(item => {
       const img = itemImages[item.type];
       if (!img || !img.complete) return;
@@ -877,30 +1083,39 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.shadowColor = '#badc58';
         drawChestnutIcon(item.x, item.y, item.width);
         ctx.restore();
+      } else if (item.type === 'bomb' && nightAlpha > 0.35) {
+        ctx.save();
+        ctx.shadowBlur = 14;
+        ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+        ctx.drawImage(img, item.x, item.y, item.width, item.height);
+        ctx.restore();
       } else {
         ctx.drawImage(img, item.x, item.y, item.width, item.height);
       }
     });
 
-    const currentBest = Math.max(score, bestScores[selectedDifficulty] || 0);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '22px sans-serif';
-    ctx.fillText(`PLAYER: ${currentUsername} [${selectedDifficulty.toUpperCase()}]`, 25, 35);
-    ctx.fillText(`SCORE: ${score}`, 25, 65);
+    // スコア・時間表示（昼の青空でも読めるよう薄い黒フチつき）
+    const drawOutlinedText = (text, x, y, font, fillColor) => {
+      ctx.save();
+      ctx.font = font;
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.72)';
+      ctx.strokeText(text, x, y);
+      ctx.fillStyle = fillColor;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    };
 
-    ctx.fillStyle = '#fffa65';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.fillText(`BEST (${selectedDifficulty.toUpperCase()}): ${currentBest}`, 25, 95);
+    const currentBest = Math.max(score, bestScores[selectedDifficulty] || 0);
+    drawOutlinedText(`PLAYER: ${currentUsername} [${selectedDifficulty.toUpperCase()}]`, 25, 35, 'bold 21px sans-serif', '#ffffff');
+    drawOutlinedText(`SCORE: ${score}`, 25, 65, 'bold 22px sans-serif', '#ffffff');
+    drawOutlinedText(`BEST (${selectedDifficulty.toUpperCase()}): ${currentBest}`, 25, 95, 'bold 20px sans-serif', '#fffa65');
 
     if (combo >= 2) {
-      ctx.fillStyle = '#70a1ff';
-      ctx.font = 'bold 24px sans-serif';
-      ctx.fillText(`COMBO x${combo}!`, 25, 125);
+      drawOutlinedText(`COMBO x${combo}!`, 25, 125, 'bold 24px sans-serif', '#70a1ff');
     }
 
-    ctx.fillStyle = timeLeft <= 5 ? '#ff4757' : '#ffffff';
-    ctx.font = '22px sans-serif';
-    ctx.fillText(`TIME: ${timeLeft}s`, canvas.width - 130, 35);
+    drawOutlinedText(`TIME: ${timeLeft}s`, canvas.width - 130, 35, 'bold 22px sans-serif', timeLeft <= 5 ? '#ff4757' : '#ffffff');
 
     if (!isGameOver) {
       const mobile = isMobileDevice();
@@ -1023,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const slotWidth = barWidth / statList.length;
       const iconSize = mobile ? 34 : 24;
+
       statList.forEach((entry, idx) => {
         const slotCenterX = barX + slotWidth * idx + slotWidth / 2;
         const iconX = slotCenterX - (mobile ? 44 : 30);
@@ -1042,6 +1258,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.textAlign = 'left';
         ctx.fillText(`×${itemStats[entry.key]}`, iconX + iconSize + (mobile ? 6 : 4), barY + (mobile ? 42 : 29));
       });
+
       ctx.textAlign = 'center';
 
       const retry = buttons.retry;
