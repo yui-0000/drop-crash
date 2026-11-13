@@ -286,10 +286,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'ArrowRight') keys.right = false;
   });
 
-  // スマホ・タブレット専用：両手タップ＆片手スライドのハイブリッド操作
+  // スマホ・タブレット専用：画面全体どこからでも反応する「両手タップ＆片手スライド」操作
   function handleTouchInput(e) {
+    // プレイ画面表示中かつゲームオーバー前のみ有効にする
     if (isGameOver) return;
     if (canvas.style.display === 'none') return;
+    if (authScreen && authScreen.style.display !== 'none') return;
+    if (guideScreen && guideScreen.style.display !== 'none') return;
 
     // プレイ中の右上「ホーム」ボタンをタップしたときは移動扱いにしない
     if (e.type === 'touchstart' && e.touches.length === 1) {
@@ -305,7 +308,9 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    e.preventDefault();
+    if (e.cancelable) {
+      e.preventDefault();
+    }
 
     // 指がすべて離れた場合
     if (e.touches.length === 0) {
@@ -379,15 +384,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 操作ボタンエリア＆ゲーム画面の両方で指のタッチ・スライドを追跡
-  [touchControls, canvas].forEach(el => {
-    if (!el) return;
-    el.addEventListener('touchstart', handleTouchInput, { passive: false });
-    el.addEventListener('touchmove', handleTouchInput, { passive: false });
-    el.addEventListener('touchend', handleTouchInput, { passive: false });
-    el.addEventListener('touchcancel', () => {
-      resetTouchState();
-    });
+  // 画面全体（ゲーム画面・その直下の余白・ボタンエリアすべて）で指のタッチ・スライドを受け付ける
+  document.addEventListener('touchstart', handleTouchInput, { passive: false });
+  document.addEventListener('touchmove', handleTouchInput, { passive: false });
+  document.addEventListener('touchend', handleTouchInput, { passive: false });
+  document.addEventListener('touchcancel', () => {
+    resetTouchState();
   });
 
   // キャンバスクリック判定（プレイ中のホームボタン＆ゲームオーバー画面の各種ボタン用）
